@@ -1,20 +1,37 @@
-import { useState } from 'react'
-import Auth        from './pages/Auth'
-import Feed        from './pages/Feed'
-import Search      from './pages/Search'
-import Scan        from './pages/Scan'
-import ProductPage from './pages/ProductPage'
-import ReviewForm  from './pages/ReviewForm'
-import Profile     from './pages/Profile'
-import { BottomNav } from './components/ui'
+import { useState, useEffect } from 'react'
+import { supabase } from './supabaseClient'
+import Auth          from './pages/Auth'
+import ResetPassword from './pages/ResetPassword'
+import Onboarding     from './pages/Onboarding'
+import Feed           from './pages/Feed'
+import Search         from './pages/Search'
+import Scan           from './pages/Scan'
+import ProductPage    from './pages/ProductPage'
+import ReviewForm     from './pages/ReviewForm'
+import Profile        from './pages/Profile'
+import { BottomNav, LoadingScreen } from './components/ui'
 
 export default function App() {
-  const [session,         setSession]         = useState(null)
+  const [session,         setSession]         = useState(undefined) // undefined = loading, null = logged out
+  const [recoveryMode,    setRecoveryMode]     = useState(false)
+  const [justSignedUp,    setJustSignedUp]     = useState(false)
   const [activeTab,       setActiveTab]       = useState('feed')
   const [productId,       setProductId]       = useState(null)
   const [reviewProductId, setReviewProductId] = useState(null)
 
-  if (!session) return <Auth onLogin={user => setSession(user)} />
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true)
+      setSession(newSession)
+    })
+    return () => subscription.subscription.unsubscribe()
+  }, [])
+
+  if (session === undefined) return <LoadingScreen />
+  if (recoveryMode) return <ResetPassword onDone={() => setRecoveryMode(false)} />
+  if (!session) return <Auth onSignedUp={() => setJustSignedUp(true)} />
+  if (justSignedUp) return <Onboarding onDone={() => setJustSignedUp(false)} />
 
   const openProduct = id => { setProductId(id); setReviewProductId(null) }
   const openReview  = id => setReviewProductId(id)
@@ -28,7 +45,7 @@ export default function App() {
       case 'feed':    return <Feed    onNavigate={navigate} onProductClick={openProduct} />
       case 'search':  return <Search  onProductClick={openProduct} />
       case 'scan':    return <Scan    onNavigate={navigate} />
-      case 'profile': return <Profile onProductClick={openProduct} onLogout={() => setSession(null)} />
+      case 'profile': return <Profile onProductClick={openProduct} onLogout={() => supabase.auth.signOut()} />
       default:        return <Feed    onNavigate={navigate} onProductClick={openProduct} />
     }
   }

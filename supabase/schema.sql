@@ -65,14 +65,21 @@ create trigger profiles_set_updated_at
 -- (no truncation) so it's collision-proof by construction -- it's the
 -- user's own primary key. Username/birthdate/disclaimer get filled in
 -- client-side right after signup.
+--
+-- This trigger fires from Supabase's Auth service connection (not the SQL
+-- editor / PostgREST connections everything else runs through), and that
+-- connection's search_path does not include `public` -- an unqualified
+-- `profiles` reference resolves to "relation does not exist" there even
+-- though the table obviously exists. Schema-qualify the table and pin
+-- search_path explicitly so this can't silently break again.
 create or replace function handle_new_user()
 returns trigger as $$
 begin
-  insert into profiles (id, username)
+  insert into public.profiles (id, username)
   values (new.id, 'user_' || replace(new.id::text, '-', ''));
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 create trigger on_auth_user_created
   after insert on auth.users
