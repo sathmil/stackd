@@ -13,7 +13,10 @@ import { BottomNav, LoadingScreen } from './components/ui'
 
 export default function App() {
   const [session,         setSession]         = useState(undefined) // undefined = loading, null = logged out
-  const [recoveryMode,    setRecoveryMode]     = useState(false)
+  // Checked synchronously from the URL itself (not just the onAuthStateChange
+  // event) -- the event only fires once during Supabase's async client init,
+  // and can be missed if that finishes before this component's effect runs.
+  const [recoveryMode,    setRecoveryMode]     = useState(() => window.location.hash.includes('type=recovery'))
   const [justSignedUp,    setJustSignedUp]     = useState(false)
   const [activeTab,       setActiveTab]       = useState('feed')
   const [productId,       setProductId]       = useState(null)
