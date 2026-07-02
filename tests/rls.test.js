@@ -69,9 +69,7 @@ describe('lists / list_items privacy', () => {
     expect(otherView).toHaveLength(0)
 
     const { data: variants } = await userA.from('product_variants').select('id').limit(1)
-    const { error: otherInsertError } = await userB
-      .from('list_items')
-      .insert({ list_id: list.id, variant_id: variants[0].id, rank_position: 1 })
+    const { error: otherInsertError } = await userB.from('list_items').insert({ list_id: list.id, variant_id: variants[0].id, rank_position: 1 })
     expect(otherInsertError).not.toBeNull()
   })
 })
@@ -80,16 +78,10 @@ describe('profiles', () => {
   it('only the owner can update their own profile row', async () => {
     const { data: userAId } = await userA.auth.getUser()
 
-    const { error: selfUpdateError } = await userA
-      .from('profiles')
-      .update({ display_name: 'Test User A' })
-      .eq('id', userAId.user.id)
+    const { error: selfUpdateError } = await userA.from('profiles').update({ display_name: 'Test User A' }).eq('id', userAId.user.id)
     expect(selfUpdateError).toBeNull()
 
-    const { error: otherUpdateError } = await userB
-      .from('profiles')
-      .update({ display_name: 'Hijacked' })
-      .eq('id', userAId.user.id)
+    await userB.from('profiles').update({ display_name: 'Hijacked' }).eq('id', userAId.user.id)
     // RLS silently filters rows rather than erroring -- confirm zero rows were touched.
     const { data: check } = await userA.from('profiles').select('display_name').eq('id', userAId.user.id).single()
     expect(check.display_name).toBe('Test User A')
@@ -98,20 +90,11 @@ describe('profiles', () => {
 
 describe('AI field protection', () => {
   it('a non-service-role client cannot change ai_ingredient_* fields directly', async () => {
-    const { data: variant } = await userA
-      .from('product_variants')
-      .select('id, product_id, ai_ingredient_quality_score')
-      .limit(1)
-      .single()
+    const { data: variant } = await userA.from('product_variants').select('id, product_id, ai_ingredient_quality_score').limit(1).single()
 
     // only allowed if this row was created by userA -- create one to be sure
     const { data: userAId } = await userA.auth.getUser()
-    const { data: ownVariant } = await userA
-      .from('product_variants')
-      .select('id')
-      .eq('created_by', userAId.user.id)
-      .limit(1)
-      .maybeSingle()
+    const { data: ownVariant } = await userA.from('product_variants').select('id').eq('created_by', userAId.user.id).limit(1).maybeSingle()
 
     const targetId = ownVariant?.id ?? variant.id
     const before = await userA.from('product_variants').select('ai_ingredient_quality_score').eq('id', targetId).single()
@@ -126,10 +109,7 @@ describe('AI field protection', () => {
     const admin = serviceClient()
     const { data: variant } = await admin.from('product_variants').select('id').limit(1).single()
 
-    const { error } = await admin
-      .from('product_variants')
-      .update({ ai_ingredient_quality_score: 4.2, ai_analysis_status: 'succeeded' })
-      .eq('id', variant.id)
+    const { error } = await admin.from('product_variants').update({ ai_ingredient_quality_score: 4.2, ai_analysis_status: 'succeeded' }).eq('id', variant.id)
     expect(error).toBeNull()
 
     const { data: after } = await admin.from('product_variants').select('ai_ingredient_quality_score').eq('id', variant.id).single()
