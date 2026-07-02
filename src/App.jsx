@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from './supabaseClient'
+import { currentUser } from './data/placeholder'
 import Auth          from './pages/Auth'
 import ResetPassword from './pages/ResetPassword'
 import Onboarding     from './pages/Onboarding'
@@ -11,16 +13,70 @@ import ReviewForm     from './pages/ReviewForm'
 import Profile        from './pages/Profile'
 import { BottomNav, LoadingScreen } from './components/ui'
 
+function AuthRoute({ session, onSignedUp }) {
+  const [searchParams] = useSearchParams()
+  if (session) return <Navigate to={searchParams.get('returnTo') || '/feed'} replace />
+  return <Auth onSignedUp={onSignedUp} />
+}
+
+function RequireAuth({ session, children }) {
+  const location = useLocation()
+  if (!session) return <Navigate to={`/auth?returnTo=${encodeURIComponent(location.pathname)}`} replace />
+  return children
+}
+
+// Temporary stand-ins for routes whose real pages land in Phase 4 -- keeps
+// the route map (and BottomNav's Lists tab) real and navigable now instead
+// of silently going nowhere, without building the actual feature early.
+function ComingSoon({ title }) {
+  return (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444', fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 16 }}>
+      {title} -- coming soon
+    </div>
+  )
+}
+
+const TAB_ROUTES = ['feed', 'search', 'scan', 'lists']
+
+function AppShell({ session, setJustSignedUp }) {
+  const location = useLocation()
+  const navigate  = useNavigate()
+
+  const activeTab = TAB_ROUTES.find(t => location.pathname.startsWith(`/${t}`))
+    || (location.pathname.startsWith('/profile') ? 'profile' : null)
+
+  const goToTab = tab => navigate(tab === 'profile' ? `/profile/${currentUser.username}` : `/${tab}`)
+
+  return (
+    <div style={{ maxWidth: 430, margin: '0 auto', height: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <Routes>
+          <Route path="/auth" element={<AuthRoute session={session} onSignedUp={() => setJustSignedUp(true)} />} />
+          <Route path="/reset-password" element={<ResetPassword onDone={() => navigate('/feed')} />} />
+          <Route path="/feed" element={<RequireAuth session={session}><Feed /></RequireAuth>} />
+          <Route path="/search" element={<RequireAuth session={session}><Search /></RequireAuth>} />
+          <Route path="/scan" element={<RequireAuth session={session}><Scan /></RequireAuth>} />
+          <Route path="/product/:variantId" element={<ProductPage />} />
+          <Route path="/product/:variantId/review" element={<RequireAuth session={session}><ReviewForm /></RequireAuth>} />
+          <Route path="/lists" element={<RequireAuth session={session}><ComingSoon title="Lists" /></RequireAuth>} />
+          <Route path="/lists/:listId" element={<ComingSoon title="List" />} />
+          <Route path="/profile/:username" element={<Profile />} />
+          <Route path="/add-product" element={<RequireAuth session={session}><ComingSoon title="Add a product" /></RequireAuth>} />
+          <Route path="*" element={<Navigate to={session ? '/feed' : '/auth'} replace />} />
+        </Routes>
+      </div>
+      {activeTab && <BottomNav active={activeTab} onNavigate={goToTab} />}
+    </div>
+  )
+}
+
 export default function App() {
-  const [session,         setSession]         = useState(undefined) // undefined = loading, null = logged out
+  const [session,      setSession]      = useState(undefined) // undefined = loading, null = logged out
   // Checked synchronously from the URL itself (not just the onAuthStateChange
   // event) -- the event only fires once during Supabase's async client init,
   // and can be missed if that finishes before this component's effect runs.
-  const [recoveryMode,    setRecoveryMode]     = useState(() => window.location.hash.includes('type=recovery'))
-  const [justSignedUp,    setJustSignedUp]     = useState(false)
-  const [activeTab,       setActiveTab]       = useState('feed')
-  const [productId,       setProductId]       = useState(null)
-  const [reviewProductId, setReviewProductId] = useState(null)
+  const [recoveryMode, setRecoveryMode] = useState(() => window.location.hash.includes('type=recovery'))
+  const [justSignedUp, setJustSignedUp] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -32,35 +88,21 @@ export default function App() {
   }, [])
 
   if (session === undefined) return <LoadingScreen />
-  if (recoveryMode) return <ResetPassword onDone={() => setRecoveryMode(false)} />
-  if (!session) return <Auth onSignedUp={() => setJustSignedUp(true)} />
+  if (recoveryMode) {
+    return (
+      <ResetPassword
+        onDone={() => {
+          window.history.replaceState(null, '', window.location.pathname)
+          setRecoveryMode(false)
+        }}
+      />
+    )
+  }
   if (justSignedUp) return <Onboarding onDone={() => setJustSignedUp(false)} />
 
-  const openProduct = id => { setProductId(id); setReviewProductId(null) }
-  const openReview  = id => setReviewProductId(id)
-  const goBack      = () => { if (reviewProductId) { setReviewProductId(null) } else { setProductId(null) } }
-  const navigate    = tab => { setActiveTab(tab); setProductId(null); setReviewProductId(null) }
-
-  const renderScreen = () => {
-    if (reviewProductId) return <ReviewForm productId={reviewProductId} onBack={goBack} />
-    if (productId)       return <ProductPage productId={productId} onBack={goBack} onReview={openReview} />
-    switch (activeTab) {
-      case 'feed':    return <Feed    onNavigate={navigate} onProductClick={openProduct} />
-      case 'search':  return <Search  onProductClick={openProduct} />
-      case 'scan':    return <Scan    onNavigate={navigate} />
-      case 'profile': return <Profile onProductClick={openProduct} onLogout={() => supabase.auth.signOut()} />
-      default:        return <Feed    onNavigate={navigate} onProductClick={openProduct} />
-    }
-  }
-
   return (
-    <div style={{ maxWidth: 430, margin: '0 auto', height: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {renderScreen()}
-      </div>
-      {!reviewProductId && !productId && (
-        <BottomNav active={activeTab} onNavigate={navigate} />
-      )}
-    </div>
+    <BrowserRouter>
+      <AppShell session={session} setJustSignedUp={setJustSignedUp} />
+    </BrowserRouter>
   )
 }

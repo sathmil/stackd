@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { products, DIM_COLOR, QUICK_TAGS } from '../data/placeholder'
 import { Divider } from '../components/ui'
 
@@ -25,8 +26,11 @@ function Slider({ label, dimKey, value, onChange }) {
   )
 }
 
-export default function ReviewForm({ productId, onBack }) {
-  const product = products.find(p => p.id === productId) || products[0]
+export default function ReviewForm() {
+  const { variantId } = useParams()
+  const navigate = useNavigate()
+  const product = products.find(p => p.id === variantId) || products[0]
+  const goBack = () => navigate(`/product/${product.id}`)
   const [scores, setScores]         = useState({ taste: 7.0, effectiveness: 7.0, ingredients: 7.0, value: 7.0 })
   const [note, setNote]             = useState('')
   const [selectedTags, setTags]     = useState([])
@@ -39,7 +43,7 @@ export default function ReviewForm({ productId, onBack }) {
       <div style={{ ...serif, fontSize: 52, color: '#5ecfcf', letterSpacing: '-0.04em' }}>{overall.toFixed(1)}</div>
       <div style={{ ...serif, fontSize: 20, color: '#e8e4dc' }}>Review posted!</div>
       <div style={{ fontSize: 13, color: '#555', ...sans }}>Thanks for rating {product.name}</div>
-      <button onClick={onBack} style={{ marginTop: 16, background: '#f0ece4', color: '#111', border: 'none', borderRadius: 20, padding: '11px 28px', fontSize: 14, cursor: 'pointer', ...serif }}>Back to product</button>
+      <button onClick={goBack} style={{ marginTop: 16, background: '#f0ece4', color: '#111', border: 'none', borderRadius: 20, padding: '11px 28px', fontSize: 14, cursor: 'pointer', ...serif }}>Back to product</button>
     </div>
   )
 
@@ -47,7 +51,7 @@ export default function ReviewForm({ productId, onBack }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Nav */}
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#555', ...sans, padding: 0 }}>Cancel</button>
+        <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#555', ...sans, padding: 0 }}>Cancel</button>
         <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>Rate it</span>
         <button onClick={() => setDone(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, fontWeight: 500, padding: 0 }}>Post</button>
       </div>

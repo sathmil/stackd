@@ -1,7 +1,10 @@
+import { useNavigate } from 'react-router-dom'
+
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans  = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
-export default function Scan({ onNavigate }) {
+export default function Scan() {
+  const navigate = useNavigate()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 28 }}>
       <div style={{ fontSize: 60, lineHeight: 1 }}>▣</div>
@@ -14,7 +17,7 @@ export default function Scan({ onNavigate }) {
           <span style={{ fontSize: 12, color: '#333', ...sans }}>Camera coming soon</span>
         </div>
       </div>
-      <button onClick={() => onNavigate('search')} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '11px 24px', fontSize: 13, color: '#666', cursor: 'pointer', ...sans, marginTop: 8 }}>
+      <button onClick={() => navigate('/search')} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '11px 24px', fontSize: 13, color: '#666', cursor: 'pointer', ...sans, marginTop: 8 }}>
         Search manually instead
       </button>
     </div>

@@ -1,12 +1,15 @@
 import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { products, reviews, users, influencerPicks } from '../data/placeholder'
 import { Avatar, ScorePill, ScoreBars, Card, Divider, NavBar } from '../components/ui'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans  = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
-export default function ProductPage({ productId, onBack, onReview }) {
-  const product  = products.find(p => p.id === productId) || products[0]
+export default function ProductPage() {
+  const { variantId } = useParams()
+  const navigate = useNavigate()
+  const product  = products.find(p => p.id === variantId) || products[0]
   const pReviews = reviews.filter(r => r.productId === product.id)
   const influencer = influencerPicks[product.id]
   const [liked, setLiked] = useState({})
@@ -16,7 +19,7 @@ export default function ProductPage({ productId, onBack, onReview }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <NavBar
         title="Product"
-        onBack={onBack}
+        onBack={() => navigate(-1)}
         rightEl={<button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#555', padding: 0 }}>•••</button>}
       />
 
@@ -92,7 +95,7 @@ export default function ProductPage({ productId, onBack, onReview }) {
         })}
 
         {/* CTA */}
-        <button onClick={() => onReview(product.id)} style={{ background: '#f0ece4', color: '#111', borderRadius: 20, padding: '14px 0', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif, letterSpacing: '-0.01em', marginTop: 4 }}>
+        <button onClick={() => navigate(`/product/${product.id}/review`)} style={{ background: '#f0ece4', color: '#111', borderRadius: 20, padding: '14px 0', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif, letterSpacing: '-0.01em', marginTop: 4 }}>
           Rate this product
         </button>
       </div>
