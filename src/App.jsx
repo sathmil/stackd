@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase } from './supabaseClient'
+import { supabase } from './lib/supabaseClient'
 import { currentUser } from './data/placeholder'
-import Auth          from './pages/Auth'
+import Auth from './pages/Auth'
 import ResetPassword from './pages/ResetPassword'
-import Onboarding     from './pages/Onboarding'
-import Feed           from './pages/Feed'
-import Search         from './pages/Search'
-import Scan           from './pages/Scan'
-import ProductPage    from './pages/ProductPage'
-import ReviewForm     from './pages/ReviewForm'
-import Profile        from './pages/Profile'
+import Onboarding from './pages/Onboarding'
+import Feed from './pages/Feed'
+import Search from './pages/Search'
+import Scan from './pages/Scan'
+import ProductPage from './pages/ProductPage'
+import ReviewForm from './pages/ReviewForm'
+import Profile from './pages/Profile'
 import { BottomNav, LoadingScreen } from './components/ui'
 
 function AuthRoute({ session, onSignedUp }) {
@@ -40,12 +40,11 @@ const TAB_ROUTES = ['feed', 'search', 'scan', 'lists']
 
 function AppShell({ session, setJustSignedUp }) {
   const location = useLocation()
-  const navigate  = useNavigate()
+  const navigate = useNavigate()
 
-  const activeTab = TAB_ROUTES.find(t => location.pathname.startsWith(`/${t}`))
-    || (location.pathname.startsWith('/profile') ? 'profile' : null)
+  const activeTab = TAB_ROUTES.find((t) => location.pathname.startsWith(`/${t}`)) || (location.pathname.startsWith('/profile') ? 'profile' : null)
 
-  const goToTab = tab => navigate(tab === 'profile' ? `/profile/${currentUser.username}` : `/${tab}`)
+  const goToTab = (tab) => navigate(tab === 'profile' ? `/profile/${currentUser.username}` : `/${tab}`)
 
   return (
     <div style={{ maxWidth: 430, margin: '0 auto', height: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -53,15 +52,57 @@ function AppShell({ session, setJustSignedUp }) {
         <Routes>
           <Route path="/auth" element={<AuthRoute session={session} onSignedUp={() => setJustSignedUp(true)} />} />
           <Route path="/reset-password" element={<ResetPassword onDone={() => navigate('/feed')} />} />
-          <Route path="/feed" element={<RequireAuth session={session}><Feed /></RequireAuth>} />
-          <Route path="/search" element={<RequireAuth session={session}><Search /></RequireAuth>} />
-          <Route path="/scan" element={<RequireAuth session={session}><Scan /></RequireAuth>} />
+          <Route
+            path="/feed"
+            element={
+              <RequireAuth session={session}>
+                <Feed />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <RequireAuth session={session}>
+                <Search />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/scan"
+            element={
+              <RequireAuth session={session}>
+                <Scan />
+              </RequireAuth>
+            }
+          />
           <Route path="/product/:variantId" element={<ProductPage />} />
-          <Route path="/product/:variantId/review" element={<RequireAuth session={session}><ReviewForm /></RequireAuth>} />
-          <Route path="/lists" element={<RequireAuth session={session}><ComingSoon title="Lists" /></RequireAuth>} />
+          <Route
+            path="/product/:variantId/review"
+            element={
+              <RequireAuth session={session}>
+                <ReviewForm />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/lists"
+            element={
+              <RequireAuth session={session}>
+                <ComingSoon title="Lists" />
+              </RequireAuth>
+            }
+          />
           <Route path="/lists/:listId" element={<ComingSoon title="List" />} />
           <Route path="/profile/:username" element={<Profile />} />
-          <Route path="/add-product" element={<RequireAuth session={session}><ComingSoon title="Add a product" /></RequireAuth>} />
+          <Route
+            path="/add-product"
+            element={
+              <RequireAuth session={session}>
+                <ComingSoon title="Add a product" />
+              </RequireAuth>
+            }
+          />
           <Route path="*" element={<Navigate to={session ? '/feed' : '/auth'} replace />} />
         </Routes>
       </div>
@@ -71,7 +112,7 @@ function AppShell({ session, setJustSignedUp }) {
 }
 
 export default function App() {
-  const [session,      setSession]      = useState(undefined) // undefined = loading, null = logged out
+  const [session, setSession] = useState(undefined) // undefined = loading, null = logged out
   // Checked synchronously from the URL itself (not just the onAuthStateChange
   // event) -- the event only fires once during Supabase's async client init,
   // and can be missed if that finishes before this component's effect runs.

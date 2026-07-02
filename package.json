@@ -8,7 +8,15 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": [
+      "oxlint",
+      "prettier --check"
+    ]
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
@@ -22,7 +30,10 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "dotenv": "^17.4.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "oxlint": "^1.69.0",
+    "prettier": "^3.9.4",
     "tailwindcss": "^4.3.1",
     "vite": "^8.1.0",
     "vitest": "^4.1.9"
