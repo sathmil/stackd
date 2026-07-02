@@ -25,7 +25,13 @@ export default function Profile() {
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
         <div style={{ width: 60 }} />
         <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>Profile</span>
-        <button onClick={() => supabase.auth.signOut()} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#555', ...sans, padding: 0 }}>
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut()
+            navigate('/auth')
+          }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#555', ...sans, padding: 0 }}
+        >
           Sign out
         </button>
       </div>
