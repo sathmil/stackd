@@ -83,6 +83,14 @@ export function Chip({ label, active, onClick }) {
   )
 }
 
+export function LoadingScreen() {
+  return (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111' }}>
+      <div style={{ ...serif, fontStyle: 'italic', fontSize: 28, color: '#333' }}>Stackd</div>
+    </div>
+  )
+}
+
 export function NavBar({ title, onBack, rightEl }) {
   return (
     <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
