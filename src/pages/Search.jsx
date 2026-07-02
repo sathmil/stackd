@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { products, CATEGORIES } from '../data/placeholder'
 import { ScorePill, SectionLabel, Chip } from '../components/ui'
 
@@ -6,10 +7,11 @@ const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans  = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 const FRIEND_TRIED = { p1: 3, p2: 1, p6: 2 }
 
-function ProductRow({ product, onClick }) {
+function ProductRow({ product }) {
+  const navigate = useNavigate()
   const friendCount = FRIEND_TRIED[product.id] || 0
   return (
-    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '0.5px solid #1a1a1a', cursor: 'pointer' }}>
+    <div onClick={() => navigate(`/product/${product.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '0.5px solid #1a1a1a', cursor: 'pointer' }}>
       <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{product.icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{product.name}</div>
@@ -27,7 +29,7 @@ function ProductRow({ product, onClick }) {
   )
 }
 
-export default function Search({ onProductClick }) {
+export default function Search() {
   const [query, setQuery] = useState('')
   const [cat, setCat]     = useState('All')
 
@@ -60,16 +62,16 @@ export default function Search({ onProductClick }) {
           <>
             {friendTried.length > 0 && <>
               <SectionLabel>Friends tried</SectionLabel>
-              {friendTried.map(p => <ProductRow key={p.id} product={p} onClick={() => onProductClick(p.id)} />)}
+              {friendTried.map(p => <ProductRow key={p.id} product={p} />)}
               <div style={{ height: 8 }} />
             </>}
             <SectionLabel>Trending this week</SectionLabel>
-            {rest.map(p => <ProductRow key={p.id} product={p} onClick={() => onProductClick(p.id)} />)}
+            {rest.map(p => <ProductRow key={p.id} product={p} />)}
           </>
         ) : filtered.length > 0 ? (
           <>
             <SectionLabel>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</SectionLabel>
-            {filtered.map(p => <ProductRow key={p.id} product={p} onClick={() => onProductClick(p.id)} />)}
+            {filtered.map(p => <ProductRow key={p.id} product={p} />)}
           </>
         ) : (
           <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>No products found for "{query}"</div>

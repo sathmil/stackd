@@ -1,11 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { feedItems, users, products, reviews, CATEGORIES } from '../data/placeholder'
 import { Avatar, ScorePill, Card, Chip, Divider } from '../components/ui'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans  = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
-function FeedCard({ item, onProductClick }) {
+function FeedCard({ item }) {
+  const navigate = useNavigate()
   const user    = users.find(u => u.id === item.userId)
   const product = products.find(p => p.id === item.productId)
   const review  = reviews.find(r => r.id === item.reviewId)
@@ -24,7 +26,7 @@ function FeedCard({ item, onProductClick }) {
 
       <span style={{ fontSize: 12, color: '#4a4a4a', ...sans }}>{item.action}</span>
 
-      <div onClick={() => onProductClick(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+      <div onClick={() => navigate(`/product/${product.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
         <div style={{ width: 34, height: 34, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{product.icon}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>{product.name}</div>
@@ -51,14 +53,15 @@ function FeedCard({ item, onProductClick }) {
   )
 }
 
-export default function Feed({ onNavigate, onProductClick }) {
+export default function Feed() {
+  const navigate = useNavigate()
   const [cat, setCat] = useState('All')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
         <span style={{ ...serif, fontStyle: 'italic', fontSize: 22, color: '#f0ece4', letterSpacing: '-0.01em' }}>Stackd</span>
         <div style={{ display: 'flex', gap: 14 }}>
-          <button onClick={() => onNavigate('scan')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#3a3a3a', padding: 0 }}>▣</button>
+          <button onClick={() => navigate('/scan')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#3a3a3a', padding: 0 }}>▣</button>
           <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#3a3a3a', padding: 0 }}>🔔</button>
         </div>
       </div>
@@ -66,7 +69,7 @@ export default function Feed({ onNavigate, onProductClick }) {
         {CATEGORIES.map(c => <Chip key={c} label={c} active={cat === c} onClick={() => setCat(c)} />)}
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {feedItems.map(item => <FeedCard key={item.id} item={item} onProductClick={onProductClick} />)}
+        {feedItems.map(item => <FeedCard key={item.id} item={item} />)}
       </div>
     </div>
   )

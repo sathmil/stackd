@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../supabaseClient'
 import { currentUser, products, reviews, TRIED_IDS, USER_SCORES } from '../data/placeholder'
 import { Avatar, ScorePill, Card, Divider } from '../components/ui'
 
@@ -11,7 +13,8 @@ const LISTS = [
   { name: 'Clean label picks', count: 5, icon: '🌿' },
 ]
 
-export default function Profile({ onProductClick, onLogout }) {
+export default function Profile() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState('tried')
   const triedProducts = products.filter(p => TRIED_IDS.includes(p.id))
   const userReviews   = reviews.filter(r => r.userId === 'u1')
@@ -22,7 +25,7 @@ export default function Profile({ onProductClick, onLogout }) {
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
         <div style={{ width: 60 }} />
         <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>Profile</span>
-        <button onClick={onLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#555', ...sans, padding: 0 }}>Sign out</button>
+        <button onClick={() => supabase.auth.signOut()} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#555', ...sans, padding: 0 }}>Sign out</button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -62,7 +65,7 @@ export default function Profile({ onProductClick, onLogout }) {
           {tab === 'tried' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {triedProducts.map(p => (
-                <div key={p.id} onClick={() => onProductClick(p.id)} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '12px', display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
+                <div key={p.id} onClick={() => navigate(`/product/${p.id}`)} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '12px', display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}>
                   <div style={{ fontSize: 24 }}>{p.icon}</div>
                   <div style={{ ...serif, fontSize: 13, color: '#e8e4dc', letterSpacing: '-0.01em', lineHeight: 1.4 }}>{p.name}</div>
                   <div style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>{p.variant}</div>
@@ -90,7 +93,7 @@ export default function Profile({ onProductClick, onLogout }) {
                   const p = products.find(x => x.id === review.productId)
                   if (!p) return null
                   return (
-                    <Card key={review.id} style={{ cursor: 'pointer', gap: 8 }} onClick={() => onProductClick(p.id)}>
+                    <Card key={review.id} style={{ cursor: 'pointer', gap: 8 }} onClick={() => navigate(`/product/${p.id}`)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ fontSize: 20 }}>{p.icon}</div>
                         <div style={{ flex: 1 }}>
