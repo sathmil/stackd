@@ -4,6 +4,7 @@ import { CATEGORIES } from '../data/placeholder'
 import { ScorePill, SectionLabel, Chip } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { fetchApprovedVariants, fetchRatingSummaries } from '../lib/api/products'
+import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
@@ -94,6 +95,11 @@ export default function Search() {
   }, [query])
 
   useEffect(() => setVisibleCount(PAGE_SIZE), [debouncedQuery, cat, sort])
+
+  useEffect(() => {
+    if (debouncedQuery) trackEvent('search', { query: debouncedQuery, category: cat })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only fire when the query itself changes, not the category alone
+  }, [debouncedQuery])
 
   const {
     data: variants,
