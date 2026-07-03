@@ -116,7 +116,10 @@ export default function App() {
   // Checked synchronously from the URL itself (not just the onAuthStateChange
   // event) -- the event only fires once during Supabase's async client init,
   // and can be missed if that finishes before this component's effect runs.
-  const [recoveryMode, setRecoveryMode] = useState(() => window.location.hash.includes('type=recovery'))
+  // Checks both shapes: the hash (#...type=recovery, the implicit flow's
+  // format) and the query string (?...type=recovery, PKCE's format -- see
+  // supabaseClient.js for why PKCE is used).
+  const [recoveryMode, setRecoveryMode] = useState(() => window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'))
   const [justSignedUp, setJustSignedUp] = useState(false)
 
   useEffect(() => {
