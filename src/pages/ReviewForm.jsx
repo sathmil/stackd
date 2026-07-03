@@ -56,7 +56,13 @@ export default function ReviewForm() {
   const { variantId } = useParams()
   const navigate = useNavigate()
   const user = useCurrentUser()
-  const goBack = () => navigate(`/product/${variantId}`)
+  // navigate(-1), not navigate(`/product/${variantId}`) -- this route is only
+  // ever reached by pushing from the product page, so going back should pop
+  // that entry rather than push a new one. Pushing here made the history
+  // stack grow every round trip (product -> review -> product -> review...),
+  // so the back button would land back on this review form instead of
+  // actually leaving.
+  const goBack = () => navigate(-1)
 
   const { data, loading, error } = useAsync(async () => {
     if (!user) return { data: null, error: null }
