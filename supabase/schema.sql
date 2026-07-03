@@ -230,6 +230,7 @@ create table product_variants (
   size           text,
   upc            text unique,
   image_url      text,
+  image_alt      text,
 
   -- nutrition facts (macros)
   serving_size   text,

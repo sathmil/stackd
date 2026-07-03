@@ -78,6 +78,14 @@ function AppShell({ session, setJustSignedUp }) {
             }
           />
           <Route
+            path="/product/:variantId/edit"
+            element={
+              <RequireAuth session={session}>
+                <AddProduct />
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/lists"
             element={
               <RequireAuth session={session}>
