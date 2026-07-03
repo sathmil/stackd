@@ -5,6 +5,18 @@ export async function fetchOwnLists(userId) {
   return supabase.from('lists').select('*, list_items(count)').eq('user_id', userId).order('created_at', { ascending: false })
 }
 
+/**
+ * Which of a user's own lists already contain a given variant, and the
+ * list_item id for each -- lets the "add to list" picker show current
+ * membership and remove without a separate lookup.
+ * @param {string[]} listIds
+ * @param {string} variantId
+ */
+export async function fetchListMembership(listIds, variantId) {
+  if (listIds.length === 0) return { data: [], error: null }
+  return supabase.from('list_items').select('id, list_id').eq('variant_id', variantId).in('list_id', listIds)
+}
+
 /** @param {string} listId */
 export async function fetchListById(listId) {
   return supabase.from('lists').select('*').eq('id', listId).maybeSingle()
