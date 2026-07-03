@@ -109,10 +109,29 @@ export default function ListDetail() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {isOwn && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: togglingVisibility ? 'default' : 'pointer', marginBottom: 4 }}>
-            <input type="checkbox" checked={list.is_public} disabled={togglingVisibility} onChange={handleToggleVisibility} />
-            <span style={{ fontSize: 12, color: '#888', ...sans }}>Public (anyone with the link can view it)</span>
-          </label>
+          <>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: togglingVisibility ? 'default' : 'pointer' }}>
+              <input type="checkbox" checked={list.is_public} disabled={togglingVisibility} onChange={handleToggleVisibility} />
+              <span style={{ fontSize: 12, color: '#888', ...sans }}>Public (anyone with the link can view it)</span>
+            </label>
+            <button
+              onClick={() => navigate('/search')}
+              style={{
+                alignSelf: 'flex-start',
+                background: 'none',
+                border: '0.5px solid #2a2a2a',
+                borderRadius: 20,
+                padding: '8px 16px',
+                fontSize: 12,
+                color: '#ccc',
+                cursor: 'pointer',
+                marginBottom: 4,
+                ...sans,
+              }}
+            >
+              + Add products
+            </button>
+          </>
         )}
 
         {items.length === 0 && (

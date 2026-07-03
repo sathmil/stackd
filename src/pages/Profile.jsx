@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { fetchProfileByUsername, fetchProfileStats, fetchReviewsForUser, fetchListsForUser, updateProfile } from '../lib/api/profiles'
+import { fetchProfileByUsername, fetchProfileStats, fetchReviewsForUser, fetchListsForUser, updateProfile, fetchDistinctLocations } from '../lib/api/profiles'
+import { deleteReview } from '../lib/api/reviews'
 import { compressImage, uploadImage } from '../lib/storage'
 import { Avatar, ScorePill, Card } from '../components/ui'
 import { timeAgo } from '../utils/timeAgo'
@@ -36,6 +37,9 @@ export default function Profile() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [deletingReviewId, setDeletingReviewId] = useState(null)
+
+  const { data: locations } = useAsync(() => fetchDistinctLocations(), [])
 
   const { data, loading, error, refetch } = useAsync(async () => {
     const { data: profile, error: pErr } = await fetchProfileByUsername(username)
@@ -58,6 +62,15 @@ export default function Profile() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     navigate('/auth')
+  }
+
+  const handleDeleteReview = async (e, reviewId) => {
+    e.stopPropagation()
+    if (!window.confirm('Delete your review? This cannot be undone.')) return
+    setDeletingReviewId(reviewId)
+    await deleteReview(reviewId)
+    setDeletingReviewId(null)
+    refetch()
   }
 
   const handleAvatarChange = async (e) => {
@@ -146,7 +159,12 @@ export default function Profile() {
               </label>
               <input value={editUsername} onChange={(e) => setEditUsername(e.target.value)} placeholder="Username" style={inputStyle} />
               <input value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder="Display name (optional)" style={inputStyle} />
-              <input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder="Location (optional)" style={inputStyle} />
+              <input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder="Location (optional)" list="location-options" style={inputStyle} />
+              <datalist id="location-options">
+                {locations?.map((loc) => (
+                  <option key={loc} value={loc} />
+                ))}
+              </datalist>
               <input value={editGoal} onChange={(e) => setEditGoal(e.target.value)} placeholder="Goal, e.g. Health-conscious (optional)" style={inputStyle} />
               {profileError && <div style={{ fontSize: 12, color: '#ff6b6b', ...sans }}>{profileError}</div>}
               <button
@@ -268,6 +286,35 @@ export default function Profile() {
                       <ScorePill score={review.overall_rating} />
                     </div>
                     {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+                    {isOwn && (
+                      <div style={{ display: 'flex', gap: 14 }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/product/${variant.id}/review`)
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0 }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteReview(e, review.id)}
+                          disabled={deletingReviewId === review.id}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: deletingReviewId === review.id ? 'default' : 'pointer',
+                            fontSize: 12,
+                            color: '#ff6b6b',
+                            ...sans,
+                            padding: 0,
+                            opacity: deletingReviewId === review.id ? 0.5 : 1,
+                          }}
+                        >
+                          {deletingReviewId === review.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
+                    )}
                   </Card>
                 )
               })
