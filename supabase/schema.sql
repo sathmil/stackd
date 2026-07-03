@@ -96,11 +96,18 @@ from auth.users u
 where not exists (select 1 from profiles p where p.id = u.id)
 on conflict (id) do nothing;
 
--- profiles holds sensitive data (birthdate) so the base table is owner-only.
--- security_invoker means this view respects the querying user's own RLS
--- instead of running with the view creator's privileges (the Postgres
--- default, which could otherwise bypass the underlying table's RLS).
-create view public_profiles with (security_invoker = true) as
+-- profiles holds sensitive data (birthdate) so the base table is owner-only
+-- (RLS: id = auth.uid()). This view's entire purpose is the opposite --
+-- exposing a safe public *subset* of columns to everyone -- so it must NOT
+-- use security_invoker: that would make it enforce the querying user's own
+-- RLS on the underlying table, which is owner-only, meaning every OTHER
+-- user's row would silently return zero rows through this view too (this
+-- was a real bug: reviews showed real ratings but "Unknown" as the
+-- reviewer, since fetchProfilesByIds came back empty for anyone but
+-- yourself). Running as the view's owner (the default) is what lets it
+-- bypass per-row RLS -- safe here specifically because the column list is
+-- deliberately restricted to non-sensitive fields.
+create view public_profiles as
   select id, username, display_name, avatar_url
   from profiles;
 
