@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { NavBar } from '../components/ui'
+import { NavBar, ScorePill } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { fetchListById, fetchListItems, removeListItem, deleteList, updateListVisibility, swapListItemRanks } from '../lib/api/lists'
+import { fetchListById, fetchListItems, removeListItem, deleteList, updateListVisibility } from '../lib/api/lists'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
@@ -18,7 +18,6 @@ export default function ListDetail() {
   const user = useCurrentUser()
   const [copied, setCopied] = useState(false)
   const [removingId, setRemovingId] = useState(null)
-  const [reorderingId, setReorderingId] = useState(null)
   const [togglingVisibility, setTogglingVisibility] = useState(false)
 
   const { data, loading, error, refetch } = useAsync(async () => {
@@ -27,10 +26,24 @@ export default function ListDetail() {
     if (!list) return { data: null, error: null }
     const { data: items, error: itemsErr } = await fetchListItems(listId)
     if (itemsErr) return { data: null, error: itemsErr }
+
     // RLS returns a null product for anything the current viewer isn't
     // allowed to see yet (e.g. someone else's still-pending submission) --
     // show nothing for that row rather than an "Unknown product" stub.
-    const visible = (items || []).filter((item) => item.product_variants?.products)
+    const visible = (items || [])
+      .filter((item) => item.product_variants?.products)
+      .map((item) => ({
+        ...item,
+        ownerRating: item.product_variants.reviews.find((r) => r.user_id === list.user_id)?.overall_rating ?? null,
+      }))
+
+    // Ranked by the list owner's own rating -- this is a "my ranked
+    // favorites" list, not an arbitrary bag, so order is derived rather
+    // than manually dragged. Not-yet-rated items sink to the bottom in
+    // insertion order (the query's rank_position order, preserved by
+    // Array.sort's stability) rather than being excluded.
+    visible.sort((a, b) => (b.ownerRating ?? -1) - (a.ownerRating ?? -1))
+
     return { data: { list, items: visible }, error: null }
   }, [listId])
 
@@ -44,16 +57,6 @@ export default function ListDetail() {
     setRemovingId(itemId)
     await removeListItem(itemId)
     setRemovingId(null)
-    refetch()
-  }
-
-  const handleMove = async (index, direction) => {
-    const items = data.items
-    const otherIndex = index + direction
-    if (otherIndex < 0 || otherIndex >= items.length) return
-    setReorderingId(items[index].id)
-    await swapListItemRanks(items[index], items[otherIndex])
-    setReorderingId(null)
     refetch()
   }
 
@@ -118,7 +121,7 @@ export default function ListDetail() {
 
         {items.map((item, i) => {
           const variant = item.product_variants
-          const product = variant?.products
+          const product = variant.products
           return (
             <div key={item.id} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ ...serif, fontSize: 13, color: '#3a3a3a', width: 16, flexShrink: 0 }}>{i + 1}</span>
@@ -131,40 +134,15 @@ export default function ListDetail() {
                   {product.brand_name} · {formatCategory(product.category)}
                 </div>
               </div>
+              {item.ownerRating != null && <ScorePill score={item.ownerRating} />}
               {isOwn && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <button
-                      onClick={() => handleMove(i, -1)}
-                      disabled={i === 0 || reorderingId != null}
-                      style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', fontSize: 12, color: i === 0 ? '#2a2a2a' : '#666', padding: 0, lineHeight: 1 }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      onClick={() => handleMove(i, 1)}
-                      disabled={i === items.length - 1 || reorderingId != null}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: i === items.length - 1 ? 'default' : 'pointer',
-                        fontSize: 12,
-                        color: i === items.length - 1 ? '#2a2a2a' : '#666',
-                        padding: 0,
-                        lineHeight: 1,
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => handleRemove(item.id)}
-                    disabled={removingId === item.id}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#ff6b6b', ...sans, padding: 0, opacity: removingId === item.id ? 0.5 : 1 }}
-                  >
-                    Remove
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleRemove(item.id)}
+                  disabled={removingId === item.id}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#ff6b6b', ...sans, padding: 0, opacity: removingId === item.id ? 0.5 : 1, flexShrink: 0 }}
+                >
+                  Remove
+                </button>
               )}
             </div>
           )
