@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Avatar, ScorePill, ScoreBars, Card, Divider, NavBar } from '../components/ui'
+import { Avatar, ScorePill, Card, Divider, NavBar } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById, fetchRatingSummaries } from '../lib/api/products'
@@ -11,8 +11,6 @@ import { trackEvent } from '../lib/analytics'
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
-const DIM_COLOR = { taste: '#ff6b6b', valueEffectiveness: '#5ecfcf', ingredientQuality: '#a78bfa' }
-
 function formatCategory(raw) {
   return raw.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
@@ -21,6 +19,7 @@ const NUTRITION_FIELDS = [
   ['calories', 'Calories', ''],
   ['protein_g', 'Protein', 'g'],
   ['sugar_g', 'Sugar', 'g'],
+  ['fiber_g', 'Fiber', 'g'],
   ['caffeine_mg', 'Caffeine', 'mg'],
 ]
 
@@ -33,6 +32,7 @@ export default function ProductPage() {
   const [ownLists, setOwnLists] = useState(null)
   const [addedToListId, setAddedToListId] = useState(null)
   const [newListName, setNewListName] = useState('')
+  const [newListPublic, setNewListPublic] = useState(true)
   const [creatingList, setCreatingList] = useState(false)
 
   const openListPicker = async () => {
@@ -54,10 +54,10 @@ export default function ProductPage() {
   const handleCreateAndAdd = async (variantId) => {
     if (!newListName.trim()) return
     setCreatingList(true)
-    const { data: list, error } = await createList({ userId: user.id, name: newListName.trim(), isPublic: true })
+    const { data: list, error } = await createList({ userId: user.id, name: newListName.trim(), isPublic: newListPublic })
     setCreatingList(false)
     if (!error) {
-      trackEvent('list_create', { list_id: list.id, is_public: true })
+      trackEvent('list_create', { list_id: list.id, is_public: newListPublic })
       setOwnLists((prev) => [list, ...(prev || [])])
       setNewListName('')
       handleAddToList(list.id, variantId)
@@ -128,12 +128,6 @@ export default function ProductPage() {
     refetch()
   }
 
-  const dims = [
-    { key: 'taste', label: 'Taste', value: summary?.avg_taste ?? null, color: DIM_COLOR.taste },
-    { key: 'valueEffectiveness', label: 'Value/effectiveness', value: summary?.avg_value_effectiveness ?? null, color: DIM_COLOR.valueEffectiveness },
-    { key: 'ingredientQuality', label: 'Ingredients (AI)', value: summary?.ai_ingredient_quality_score ?? null, color: DIM_COLOR.ingredientQuality },
-  ]
-
   const nutrition = NUTRITION_FIELDS.filter(([key]) => variant[key] != null)
 
   return (
@@ -186,23 +180,40 @@ export default function ProductPage() {
           </div>
         </div>
 
-        <ScoreBars dims={dims} />
-
-        {nutrition.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {nutrition.map(([key, label, unit]) => (
-              <div key={key} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '8px 12px', flex: '1 0 40%' }}>
-                <div style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>
-                  {variant[key]}
-                  {unit}
-                </div>
-                <div style={{ fontSize: 10, color: '#4a4a4a', ...sans, marginTop: 2 }}>{label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {summary?.ratings_count > 0 && summary.buy_again_pct != null && <div style={{ fontSize: 12, color: '#5a5a5a', ...sans }}>{summary.buy_again_pct}% would buy again</div>}
+
+        {/* Objective info -- nutrition facts and AI ingredient analysis are
+            facts about the product, not anyone's subjective rating, so they
+            live here rather than blended into the score above. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>Nutrition & ingredients</span>
+
+          {nutrition.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {nutrition.map(([key, label, unit]) => (
+                <div key={key} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '8px 12px', flex: '1 0 40%' }}>
+                  <div style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>
+                    {variant[key]}
+                    {unit}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#4a4a4a', ...sans, marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, color: '#5a5a5a', ...sans }}>Ingredient quality (AI)</span>
+              {variant.ai_ingredient_quality_score != null ? (
+                <ScorePill score={variant.ai_ingredient_quality_score} />
+              ) : (
+                <span style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>Not yet analyzed</span>
+              )}
+            </div>
+            {variant.ai_ingredient_summary && <div style={{ fontSize: 12, color: '#5a5a5a', ...sans, lineHeight: 1.6 }}>{variant.ai_ingredient_summary}</div>}
+          </div>
+        </div>
 
         {user && (
           <div>
@@ -236,7 +247,7 @@ export default function ProductPage() {
                     {addedToListId === list.id ? `Added to ${list.name}` : list.name}
                   </button>
                 ))}
-                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <input
                     value={newListName}
                     onChange={(e) => setNewListName(e.target.value)}
@@ -262,6 +273,10 @@ export default function ProductPage() {
                     {creatingList ? '...' : 'Create'}
                   </button>
                 </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={newListPublic} onChange={(e) => setNewListPublic(e.target.checked)} />
+                  <span style={{ fontSize: 11, color: '#666', ...sans }}>Public (anyone with the link can view it)</span>
+                </label>
               </div>
             )}
           </div>
@@ -283,7 +298,7 @@ export default function ProductPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 {review.reviewer && <Avatar user={{ avatar: review.reviewer.username.charAt(0).toUpperCase(), avatarColor: 'cyan' }} size="sm" />}
                 <span style={{ ...serif, fontSize: 13, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isOwn ? 'You' : review.reviewer?.username || 'Unknown'}</span>
-                <ScorePill score={(review.taste_rating + review.value_effectiveness_rating) / 2} extraStyle={{ marginLeft: 'auto' }} />
+                <ScorePill score={review.overall_rating} extraStyle={{ marginLeft: 'auto' }} />
               </div>
               {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
               {review.tags.length > 0 && (

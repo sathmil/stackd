@@ -10,25 +10,24 @@ import { trackEvent } from '../lib/analytics'
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
-const DIM_COLOR = { taste: '#ff6b6b', valueEffectiveness: '#5ecfcf' }
+const RATING_COLOR = '#5ecfcf'
 
-function Slider({ label, dimKey, value, onChange }) {
-  const color = DIM_COLOR[dimKey]
-  const pct = ((value - 1) / 4) * 100
+function Slider({ label, value, onChange }) {
+  const pct = ((value - 1) / 9) * 100
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 13, color: '#5a5a5a', ...sans }}>{label}</span>
-        <span style={{ ...serif, fontSize: 14, color }}>{value.toFixed(1)}</span>
+        <span style={{ ...serif, fontSize: 14, color: RATING_COLOR }}>{value.toFixed(1)}</span>
       </div>
       <div style={{ position: 'relative', height: 22, display: 'flex', alignItems: 'center' }}>
         <div style={{ position: 'absolute', left: 0, right: 0, height: 3, background: '#1e1e1e', borderRadius: 2 }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2 }} />
+          <div style={{ height: '100%', width: `${pct}%`, background: RATING_COLOR, borderRadius: 2 }} />
         </div>
         <input
           type="range"
           min="1"
-          max="5"
+          max="10"
           step="0.1"
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
@@ -43,7 +42,7 @@ function Slider({ label, dimKey, value, onChange }) {
             height: 15,
             borderRadius: '50%',
             background: '#111',
-            border: `2px solid ${color}`,
+            border: `2px solid ${RATING_COLOR}`,
             pointerEvents: 'none',
           }}
         />
@@ -71,8 +70,7 @@ export default function ReviewForm() {
     return { data: { variant, tags: tags || [], ownReview }, error: null }
   }, [variantId, user])
 
-  const [tasteRating, setTasteRating] = useState(3.0)
-  const [valueEffectivenessRating, setValueEffectivenessRating] = useState(3.0)
+  const [overallRating, setOverallRating] = useState(6.0)
   const [wouldBuyAgain, setWouldBuyAgain] = useState(null)
   const [notes, setNotes] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState([])
@@ -82,8 +80,7 @@ export default function ReviewForm() {
   useEffect(() => {
     if (!data?.ownReview) return
     const r = data.ownReview
-    setTasteRating(Number(r.taste_rating))
-    setValueEffectivenessRating(Number(r.value_effectiveness_rating))
+    setOverallRating(Number(r.overall_rating))
     setWouldBuyAgain(r.would_buy_again)
     setNotes(r.notes || '')
     setSelectedTagIds(r.review_tags.map((rt) => rt.tag_id))
@@ -96,8 +93,7 @@ export default function ReviewForm() {
     const { data: review, error } = await upsertReview({
       variantId,
       userId: user.id,
-      tasteRating,
-      valueEffectivenessRating,
+      overallRating,
       wouldBuyAgain,
       notes,
     })
@@ -196,11 +192,8 @@ export default function ReviewForm() {
 
         <Divider />
 
-        {/* Sliders */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Slider label="Taste" dimKey="taste" value={tasteRating} onChange={setTasteRating} />
-          <Slider label="Value / effectiveness" dimKey="valueEffectiveness" value={valueEffectivenessRating} onChange={setValueEffectivenessRating} />
-        </div>
+        {/* Rating */}
+        <Slider label="Overall rating" value={overallRating} onChange={setOverallRating} />
 
         <Divider />
 

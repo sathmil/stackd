@@ -25,6 +25,24 @@ export async function deleteList(listId) {
   return supabase.from('lists').delete().eq('id', listId)
 }
 
+/** @param {string} listId @param {boolean} isPublic */
+export async function updateListVisibility(listId, isPublic) {
+  return supabase.from('lists').update({ is_public: isPublic }).eq('id', listId).select().single()
+}
+
+/**
+ * Swaps rank_position between two items -- used by the up/down move
+ * buttons. Two updates rather than one to avoid violating the
+ * (list_id, vacant rank) uniqueness expectations mid-write.
+ * @param {{ id: string, rank_position: number }} itemA
+ * @param {{ id: string, rank_position: number }} itemB
+ */
+export async function swapListItemRanks(itemA, itemB) {
+  const { error: errA } = await supabase.from('list_items').update({ rank_position: itemB.rank_position }).eq('id', itemA.id)
+  if (errA) return { error: errA }
+  return supabase.from('list_items').update({ rank_position: itemA.rank_position }).eq('id', itemB.id)
+}
+
 /**
  * Appends to the end of the list -- no drag-to-reorder in this phase, just
  * add/remove, so the next rank is always (current max + 1).
