@@ -14,6 +14,24 @@ export async function fetchReviewsForVariant(variantId, { limit = 10, offset = 0
     .range(offset, offset + limit - 1)
 }
 
+/**
+ * Global reverse-chronological feed -- no follow graph (see DECISIONS.md:
+ * "aggregate-only ratings, no follow graph, for MVP"). Products/variants
+ * pending approval aren't excluded server-side (reviews RLS only cares
+ * about the review's own status, not the underlying product's), so the
+ * caller filters those out client-side the same way ListDetail.jsx does
+ * for RLS-hidden list items.
+ * @param {{ limit?: number, offset?: number }} params
+ */
+export async function fetchRecentReviews({ limit = 15, offset = 0 } = {}) {
+  return supabase
+    .from('reviews')
+    .select('*, product_variants(*, products(*))')
+    .eq('status', 'visible')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
+}
+
 /** @param {string[]} userIds */
 export async function fetchProfilesByIds(userIds) {
   if (userIds.length === 0) return { data: [], error: null }

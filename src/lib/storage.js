@@ -29,10 +29,11 @@ export async function compressImage(file) {
  * @param {Blob} blob
  * @param {string} bucket
  * @param {string} path
+ * @param {{ upsert?: boolean }} [options] -- upsert for a fixed path that gets replaced (e.g. an avatar), not accumulated
  * @returns {Promise<{ url: string | null, error: Error | null }>}
  */
-export async function uploadImage(blob, bucket, path) {
-  const { error } = await supabase.storage.from(bucket).upload(path, blob, { contentType: 'image/webp', upsert: false })
+export async function uploadImage(blob, bucket, path, { upsert = false } = {}) {
+  const { error } = await supabase.storage.from(bucket).upload(path, blob, { contentType: 'image/webp', upsert })
   if (error) return { url: null, error }
   const { data } = supabase.storage.from(bucket).getPublicUrl(path)
   return { url: data.publicUrl, error: null }

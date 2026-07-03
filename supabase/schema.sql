@@ -57,6 +57,11 @@ create table profiles (
   display_name           text,
   avatar_url             text,
   birthdate              date,
+  -- freeform, self-reported -- not added until Phase 6 because that's the
+  -- first phase where Profile.jsx actually reads/writes real profile data
+  -- at all, rather than several phases before anything displays them
+  location               text,
+  goal                   text,
   disclaimer_accepted_at timestamptz,
   created_at             timestamptz not null default now(),
   updated_at             timestamptz not null default now()
@@ -113,7 +118,7 @@ on conflict (id) do nothing;
 -- bypass per-row RLS -- safe here specifically because the column list is
 -- deliberately restricted to non-sensitive fields.
 create view public_profiles as
-  select id, username, display_name, avatar_url
+  select id, username, display_name, avatar_url, location, goal
   from profiles;
 
 alter table profiles enable row level security;

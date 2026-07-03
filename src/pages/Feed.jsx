@@ -1,75 +1,173 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { feedItems, users, products, reviews, CATEGORIES } from '../data/placeholder'
-import { Avatar, ScorePill, Card, Chip, Divider } from '../components/ui'
+import { Avatar, ScorePill, Card } from '../components/ui'
+import { fetchRecentReviews, fetchProfilesByIds, fetchTagsForReviews } from '../lib/api/reviews'
+import { timeAgo } from '../utils/timeAgo'
+import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans  = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
-function FeedCard({ item }) {
+const PAGE_SIZE = 15
+
+function formatCategory(raw) {
+  return raw.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}
+
+function FeedCard({ review }) {
   const navigate = useNavigate()
-  const user    = users.find(u => u.id === item.userId)
-  const product = products.find(p => p.id === item.productId)
-  const review  = reviews.find(r => r.id === item.reviewId)
-  const [liked, setLiked] = useState(false)
-  const [saved, setSaved] = useState(false)
-  if (!user || !product) return null
-  const score = review ? review.overallScore : product.overallScore
+  const variant = review.product_variants
+  const product = variant.products
 
   return (
     <Card>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Avatar user={user} size="sm" />
-        <span style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>{user.username}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: '#3a3a3a', ...sans }}>{item.createdAt}</span>
+      <div
+        onClick={() => review.reviewer && navigate(`/profile/${review.reviewer.username}`)}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: review.reviewer ? 'pointer' : 'default' }}
+      >
+        {review.reviewer && <Avatar user={review.reviewer} size="sm" />}
+        <span style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>{review.reviewer?.username || 'Unknown'}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: '#3a3a3a', ...sans }}>{timeAgo(review.created_at)}</span>
       </div>
 
-      <span style={{ fontSize: 12, color: '#4a4a4a', ...sans }}>{item.action}</span>
+      <span style={{ fontSize: 12, color: '#4a4a4a', ...sans }}>rated a product</span>
 
-      <div onClick={() => navigate(`/product/${product.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-        <div style={{ width: 34, height: 34, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{product.icon}</div>
+      <div onClick={() => navigate(`/product/${variant.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+        {variant.image_url ? (
+          <img src={variant.image_url} alt={variant.image_alt || product.name} style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              background: '#1a1a1a',
+              border: '0.5px solid #222',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 15,
+              color: '#4a4a4a',
+              flexShrink: 0,
+              ...serif,
+            }}
+          >
+            {product.name.charAt(0)}
+          </div>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>{product.name}</div>
-          <div style={{ fontSize: 11, color: '#4a4a4a', ...sans, marginTop: 1 }}>{product.variant} · {product.category}</div>
+          <div style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>
+            {product.name}
+            {variant.flavor ? ` — ${variant.flavor}` : ''}
+          </div>
+          <div style={{ fontSize: 11, color: '#4a4a4a', ...sans, marginTop: 1 }}>
+            {product.brand_name} · {formatCategory(product.category)}
+          </div>
         </div>
-        <ScorePill score={score} />
+        <ScorePill score={review.overall_rating} />
       </div>
 
-      {review?.text && (
-        <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.text}"</div>
+      {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+
+      {review.tags.length > 0 && (
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {review.tags.map((tag) => (
+            <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#4a4a4a', ...sans }}>
+              {tag.label}
+            </span>
+          ))}
+        </div>
       )}
-
-      <Divider />
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-        <button onClick={() => setLiked(!liked)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, color: liked ? '#ff6b6b' : '#3a3a3a', fontSize: 13, ...sans, padding: 0 }}>
-          {liked ? '♥' : '♡'} <span style={{ fontSize: 11 }}>{(review?.likes || 0) + (liked ? 1 : 0)}</span>
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3a3a3a', fontSize: 13, ...sans, padding: 0 }}>◯ <span style={{ fontSize: 11 }}>0</span></button>
-        <button onClick={() => setSaved(!saved)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', color: saved ? '#5ecfcf' : '#3a3a3a', fontSize: 15, padding: 0 }}>
-          {saved ? '◈' : '◇'}
-        </button>
-      </div>
     </Card>
   )
 }
 
 export default function Feed() {
   const navigate = useNavigate()
-  const [cat, setCat] = useState('All')
+  const [reviews, setReviews] = useState([])
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState(null)
+
+  const loadPage = async (currentOffset, replace) => {
+    const setPageLoading = replace ? setLoading : setLoadingMore
+    setPageLoading(true)
+
+    const { data: rows, error: fetchError } = await fetchRecentReviews({ limit: PAGE_SIZE, offset: currentOffset })
+    if (fetchError) {
+      setError(fetchError)
+      setPageLoading(false)
+      return
+    }
+
+    // Pending products' own-reviews slip through reviews RLS (which only
+    // cares about the review's status, not the underlying product's) --
+    // filtered here the same way ListDetail.jsx filters RLS-hidden items.
+    const visible = (rows || []).filter((r) => r.product_variants?.products?.status === 'approved')
+
+    const userIds = [...new Set(visible.map((r) => r.user_id))]
+    const reviewIds = visible.map((r) => r.id)
+    const [{ data: profiles }, { data: reviewTags }] = await Promise.all([fetchProfilesByIds(userIds), fetchTagsForReviews(reviewIds)])
+    const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p]))
+    const tagsByReview = {}
+    for (const rt of reviewTags || []) {
+      if (!tagsByReview[rt.review_id]) tagsByReview[rt.review_id] = []
+      if (rt.tags) tagsByReview[rt.review_id].push(rt.tags)
+    }
+    const enriched = visible.map((r) => ({ ...r, reviewer: profileMap[r.user_id], tags: tagsByReview[r.id] || [] }))
+
+    setReviews((prev) => (replace ? enriched : [...prev, ...enriched]))
+    setHasMore((rows || []).length === PAGE_SIZE)
+    setPageLoading(false)
+  }
+
+  useEffect(() => {
+    trackEvent('feed_view')
+    loadPage(0, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run once on mount
+  }, [])
+
+  const handleLoadMore = () => {
+    const nextOffset = offset + PAGE_SIZE
+    setOffset(nextOffset)
+    loadPage(nextOffset, false)
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
         <span style={{ ...serif, fontStyle: 'italic', fontSize: 22, color: '#f0ece4', letterSpacing: '-0.01em' }}>Stackd</span>
         <div style={{ display: 'flex', gap: 14 }}>
-          <button onClick={() => navigate('/scan')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#3a3a3a', padding: 0 }}>▣</button>
-          <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#3a3a3a', padding: 0 }}>🔔</button>
+          <button onClick={() => navigate('/scan')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#3a3a3a', padding: 0 }}>
+            ▣
+          </button>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 6, padding: '10px 14px', overflowX: 'auto', flexShrink: 0, borderBottom: '0.5px solid #1e1e1e' }}>
-        {CATEGORIES.map(c => <Chip key={c} label={c} active={cat === c} onClick={() => setCat(c)} />)}
-      </div>
+
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {feedItems.map(item => <FeedCard key={item.id} item={item} />)}
+        {loading && <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>}
+
+        {error && <div style={{ textAlign: 'center', padding: '48px 0', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load the feed. Try again in a moment.</div>}
+
+        {!loading && !error && reviews.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>No activity yet. Be the first to rate something.</div>
+        )}
+
+        {reviews.map((review) => (
+          <FeedCard key={review.id} review={review} />
+        ))}
+
+        {!loading && hasMore && reviews.length > 0 && (
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            style={{ background: 'none', border: '0.5px solid #222', borderRadius: 20, padding: '10px 0', fontSize: 13, color: '#888', cursor: 'pointer', ...sans, marginTop: 4 }}
+          >
+            {loadingMore ? 'Loading...' : 'Load more'}
+          </button>
+        )}
       </div>
     </div>
   )

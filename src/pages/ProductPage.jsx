@@ -377,8 +377,11 @@ export default function ProductPage() {
           const isOwn = user && review.user_id === user.id
           return (
             <Card key={review.id} style={{ gap: 8, border: isOwn ? '0.5px solid #2a3a3a' : undefined }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                {review.reviewer && <Avatar user={{ avatar: review.reviewer.username.charAt(0).toUpperCase(), avatarColor: 'cyan' }} size="sm" />}
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: review.reviewer ? 'pointer' : 'default' }}
+                onClick={() => review.reviewer && navigate(`/profile/${review.reviewer.username}`)}
+              >
+                {review.reviewer && <Avatar user={review.reviewer} size="sm" />}
                 <span style={{ ...serif, fontSize: 13, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isOwn ? 'You' : review.reviewer?.username || 'Unknown'}</span>
                 <ScorePill score={review.overall_rating} extraStyle={{ marginLeft: 'auto' }} />
               </div>
