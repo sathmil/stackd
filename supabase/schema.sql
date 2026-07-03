@@ -30,6 +30,7 @@ drop function if exists handle_new_user cascade;
 drop function if exists protect_ai_fields cascade;
 drop function if exists check_review_rate_limit cascade;
 drop function if exists check_product_rate_limit cascade;
+drop function if exists check_report_rate_limit cascade;
 drop trigger if exists on_auth_user_created on auth.users;
 
 create extension if not exists pg_trgm;
@@ -469,7 +470,8 @@ create table review_reports (
   review_id   uuid not null references reviews(id) on delete cascade,
   reporter_id uuid not null references auth.users(id) on delete cascade,
   reason      text,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  unique (review_id, reporter_id)
 );
 
 alter table review_reports enable row level security;
@@ -479,6 +481,24 @@ create policy "review_reports insert authenticated"
   with check (reporter_id = auth.uid());
 
 -- no select policy for the client: you read these directly in Studio.
+
+-- same shape as reviews_rate_limit / products_rate_limit above -- cheap
+-- insurance against a single bad actor spamming reports, not general abuse
+-- protection (the unique constraint above already stops re-reporting the
+-- same review).
+create or replace function check_report_rate_limit()
+returns trigger as $$
+begin
+  if (select count(*) from review_reports where reporter_id = new.reporter_id and created_at > now() - interval '1 day') >= 50 then
+    raise exception 'Daily report limit reached, try again tomorrow';
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger review_reports_rate_limit
+  before insert on review_reports
+  for each row execute function check_report_rate_limit();
 
 -- ============================================================
 -- lists / list_items ("stacks" -- ranked, references variants)
