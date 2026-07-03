@@ -1,13 +1,26 @@
-import { AVATAR_STYLE } from '../data/placeholder'
 import { scoreStyle } from '../utils/scoreStyle'
+import { colorHash } from '../utils/colorHash'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
+const AVATAR_STYLE = {
+  coral: { background: '#2a1010', color: '#ff6b6b' },
+  cyan: { background: '#0d2020', color: '#5ecfcf' },
+  lav: { background: '#1a1525', color: '#a78bfa' },
+  warm: { background: '#252010', color: '#e8c97a' },
+}
+
+/** @param {{ user: { id: string, username?: string, avatar_url?: string|null }, size?: 'sm'|'md'|'lg' }} props */
 export function Avatar({ user, size = 'sm' }) {
   const px = { sm: 28, md: 36, lg: 48 }[size]
   const fs = { sm: 10, md: 12, lg: 15 }[size]
-  const style = AVATAR_STYLE[user.avatarColor] || AVATAR_STYLE.cyan
+
+  if (user.avatar_url) {
+    return <img src={user.avatar_url} alt="" style={{ width: px, height: px, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  }
+
+  const style = AVATAR_STYLE[colorHash(user.id || user.username || '?')]
   return (
     <div
       style={{
@@ -26,7 +39,7 @@ export function Avatar({ user, size = 'sm' }) {
         flexShrink: 0,
       }}
     >
-      {user.avatar}
+      {(user.username || '?').charAt(0).toUpperCase()}
     </div>
   )
 }

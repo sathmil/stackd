@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
-import { currentUser } from './data/placeholder'
+import { useOwnUsername } from './hooks/useOwnUsername'
 import Auth from './pages/Auth'
 import ResetPassword from './pages/ResetPassword'
 import Onboarding from './pages/Onboarding'
@@ -33,10 +33,17 @@ const TAB_ROUTES = ['feed', 'search', 'scan', 'lists']
 function AppShell({ session, setJustSignedUp }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const ownUsername = useOwnUsername(!!session)
 
   const activeTab = TAB_ROUTES.find((t) => location.pathname.startsWith(`/${t}`)) || (location.pathname.startsWith('/profile') ? 'profile' : null)
 
-  const goToTab = (tab) => navigate(tab === 'profile' ? `/profile/${currentUser.username}` : `/${tab}`)
+  const goToTab = (tab) => {
+    if (tab === 'profile') {
+      if (ownUsername) navigate(`/profile/${ownUsername}`)
+      return
+    }
+    navigate(`/${tab}`)
+  }
 
   return (
     <div style={{ maxWidth: 430, margin: '0 auto', height: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
