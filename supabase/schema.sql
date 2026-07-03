@@ -4,9 +4,12 @@
 -- before any production launch. Assumes pgcrypto (gen_random_uuid) is
 -- available by default on Supabase.
 --
--- Safe to re-run from scratch at any point before Phase 9 -- there is no
--- real user data to protect yet, so this file always drops and rebuilds
--- everything it owns rather than assuming a clean database.
+-- Written to always drop and rebuild everything it owns rather than assume
+-- a clean database. NOTE: real user data now exists in the dev project
+-- (accounts, reviews, etc as of Phase 3.5) -- do NOT re-run this file
+-- wholesale against it. Apply new changes as targeted SQL snippets instead;
+-- this file stays the reference for what a fresh reset would produce, and
+-- is fully safe again once Phase 9's real migrations replace it.
 
 drop view if exists variant_rating_summary cascade;
 drop view if exists public_profiles cascade;
@@ -26,6 +29,7 @@ drop function if exists set_updated_at cascade;
 drop function if exists handle_new_user cascade;
 drop function if exists protect_ai_fields cascade;
 drop function if exists check_review_rate_limit cascade;
+drop function if exists check_product_rate_limit cascade;
 drop trigger if exists on_auth_user_created on auth.users;
 
 create extension if not exists pg_trgm;
@@ -197,6 +201,23 @@ create policy "products update own"
   on products for update
   using (created_by = auth.uid())
   with check (created_by = auth.uid());
+
+-- simple abuse guard: cap how many products a single user can submit in a
+-- day -- cheap insurance against a single bad actor, not a general-purpose
+-- rate limiter (same shape as reviews_rate_limit above).
+create or replace function check_product_rate_limit()
+returns trigger as $$
+begin
+  if (select count(*) from products where created_by = new.created_by and created_at > now() - interval '1 day') >= 20 then
+    raise exception 'Daily product submission limit reached, try again tomorrow';
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger products_rate_limit
+  before insert on products
+  for each row execute function check_product_rate_limit();
 
 -- ============================================================
 -- product_variants (flavor/size -- this is what actually gets rated)

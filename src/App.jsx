@@ -11,6 +11,9 @@ import Scan from './pages/Scan'
 import ProductPage from './pages/ProductPage'
 import ReviewForm from './pages/ReviewForm'
 import Profile from './pages/Profile'
+import Lists from './pages/Lists'
+import ListDetail from './pages/ListDetail'
+import AddProduct from './pages/AddProduct'
 import { BottomNav, LoadingScreen } from './components/ui'
 
 function AuthRoute({ session, onSignedUp }) {
@@ -23,17 +26,6 @@ function RequireAuth({ session, children }) {
   const location = useLocation()
   if (!session) return <Navigate to={`/auth?returnTo=${encodeURIComponent(location.pathname)}`} replace />
   return children
-}
-
-// Temporary stand-ins for routes whose real pages land in Phase 4 -- keeps
-// the route map (and BottomNav's Lists tab) real and navigable now instead
-// of silently going nowhere, without building the actual feature early.
-function ComingSoon({ title }) {
-  return (
-    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444', fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 16 }}>
-      {title} -- coming soon
-    </div>
-  )
 }
 
 const TAB_ROUTES = ['feed', 'search', 'scan', 'lists']
@@ -89,17 +81,17 @@ function AppShell({ session, setJustSignedUp }) {
             path="/lists"
             element={
               <RequireAuth session={session}>
-                <ComingSoon title="Lists" />
+                <Lists />
               </RequireAuth>
             }
           />
-          <Route path="/lists/:listId" element={<ComingSoon title="List" />} />
+          <Route path="/lists/:listId" element={<ListDetail />} />
           <Route path="/profile/:username" element={<Profile />} />
           <Route
             path="/add-product"
             element={
               <RequireAuth session={session}>
-                <ComingSoon title="Add a product" />
+                <AddProduct />
               </RequireAuth>
             }
           />

@@ -5,6 +5,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById, fetchRatingSummaries } from '../lib/api/products'
 import { fetchReviewsForVariant, fetchProfilesByIds, fetchTagsForReviews, deleteReview } from '../lib/api/reviews'
+import { fetchOwnLists, createList, addListItem } from '../lib/api/lists'
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
@@ -28,6 +29,40 @@ export default function ProductPage() {
   const navigate = useNavigate()
   const user = useCurrentUser()
   const [deleting, setDeleting] = useState(false)
+  const [showListPicker, setShowListPicker] = useState(false)
+  const [ownLists, setOwnLists] = useState(null)
+  const [addedToListId, setAddedToListId] = useState(null)
+  const [newListName, setNewListName] = useState('')
+  const [creatingList, setCreatingList] = useState(false)
+
+  const openListPicker = async () => {
+    setShowListPicker((v) => !v)
+    if (!ownLists && user) {
+      const { data } = await fetchOwnLists(user.id)
+      setOwnLists(data || [])
+    }
+  }
+
+  const handleAddToList = async (listId, variantId) => {
+    const { error } = await addListItem(listId, variantId)
+    if (!error) {
+      setAddedToListId(listId)
+      trackEvent('list_item_add', { list_id: listId, variant_id: variantId })
+    }
+  }
+
+  const handleCreateAndAdd = async (variantId) => {
+    if (!newListName.trim()) return
+    setCreatingList(true)
+    const { data: list, error } = await createList({ userId: user.id, name: newListName.trim(), isPublic: true })
+    setCreatingList(false)
+    if (!error) {
+      trackEvent('list_create', { list_id: list.id, is_public: true })
+      setOwnLists((prev) => [list, ...(prev || [])])
+      setNewListName('')
+      handleAddToList(list.id, variantId)
+    }
+  }
 
   const { data, loading, error, refetch } = useAsync(async () => {
     const { data: variant, error: vErr } = await fetchVariantById(variantId)
@@ -168,6 +203,69 @@ export default function ProductPage() {
         )}
 
         {summary?.ratings_count > 0 && summary.buy_again_pct != null && <div style={{ fontSize: 12, color: '#5a5a5a', ...sans }}>{summary.buy_again_pct}% would buy again</div>}
+
+        {user && (
+          <div>
+            <button
+              onClick={openListPicker}
+              style={{ background: 'none', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '8px 16px', fontSize: 12, color: '#ccc', cursor: 'pointer', ...sans }}
+            >
+              {showListPicker ? 'Close' : '+ Add to list'}
+            </button>
+
+            {showListPicker && (
+              <div style={{ marginTop: 10, background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {ownLists === null && <div style={{ fontSize: 12, color: '#3a3a3a', ...sans }}>Loading your lists...</div>}
+                {ownLists?.length === 0 && <div style={{ fontSize: 12, color: '#3a3a3a', ...sans }}>You don't have any lists yet -- make one below.</div>}
+                {ownLists?.map((list) => (
+                  <button
+                    key={list.id}
+                    onClick={() => handleAddToList(list.id, variant.id)}
+                    disabled={addedToListId === list.id}
+                    style={{
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      cursor: addedToListId === list.id ? 'default' : 'pointer',
+                      fontSize: 13,
+                      color: addedToListId === list.id ? '#5ecfcf' : '#ccc',
+                      ...sans,
+                      padding: '6px 0',
+                    }}
+                  >
+                    {addedToListId === list.id ? `Added to ${list.name}` : list.name}
+                  </button>
+                ))}
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <input
+                    value={newListName}
+                    onChange={(e) => setNewListName(e.target.value)}
+                    placeholder="New list name"
+                    style={{ flex: 1, background: '#1a1a1a', border: '0.5px solid #252525', borderRadius: 8, padding: '8px 10px', fontSize: 12, color: '#ccc', outline: 'none', ...sans }}
+                  />
+                  <button
+                    onClick={() => handleCreateAndAdd(variant.id)}
+                    disabled={creatingList || !newListName.trim()}
+                    style={{
+                      background: '#f0ece4',
+                      color: '#111',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: 'none',
+                      cursor: 'pointer',
+                      opacity: creatingList || !newListName.trim() ? 0.5 : 1,
+                      ...sans,
+                    }}
+                  >
+                    {creatingList ? '...' : 'Create'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <Divider />
 

@@ -27,3 +27,39 @@ export async function fetchRatingSummaries(variantIds) {
   if (variantIds.length === 0) return { data: [], error: null }
   return supabase.from('variant_rating_summary').select('*').in('variant_id', variantIds)
 }
+
+/**
+ * Case-insensitive lookup, creates one if no match -- avoids near-duplicate
+ * brand rows for casing/whitespace variants of the same real brand.
+ * @param {string} name
+ */
+export async function fetchOrCreateBrand(name) {
+  const trimmed = name.trim()
+  const { data: existing, error: findError } = await supabase.from('brands').select('*').ilike('name', trimmed).maybeSingle()
+  if (findError) return { data: null, error: findError }
+  if (existing) return { data: existing, error: null }
+  return supabase.from('brands').insert({ name: trimmed }).select().single()
+}
+
+/** @param {{ brandId: string, brandName: string, name: string, category: string, description?: string, createdBy: string }} params */
+export async function createProduct({ brandId, brandName, name, category, description, createdBy }) {
+  return supabase
+    .from('products')
+    .insert({ brand_id: brandId, brand_name: brandName, name, category, description: description || null, created_by: createdBy })
+    .select()
+    .single()
+}
+
+/** @param {object} fields -- product_id, flavor, size, nutrition columns, ingredients_text, image_url, created_by */
+export async function createProductVariant(fields) {
+  return supabase
+    .from('product_variants')
+    .insert({ ...fields, data_source: 'manual' })
+    .select()
+    .single()
+}
+
+/** @param {string} key */
+export async function fetchFeatureFlag(key) {
+  return supabase.from('feature_flags').select('enabled').eq('key', key).maybeSingle()
+}

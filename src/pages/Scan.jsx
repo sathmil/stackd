@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans  = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
 export default function Scan() {
   const navigate = useNavigate()
@@ -12,13 +12,32 @@ export default function Scan() {
       <div style={{ fontSize: 14, color: '#4a4a4a', ...sans, textAlign: 'center', lineHeight: 1.7, maxWidth: 250 }}>
         Point your camera at any health product barcode to instantly pull up its Stackd page.
       </div>
-      <div style={{ marginTop: 8, background: '#181818', border: '0.5px solid #222', borderRadius: 16, width: '100%', maxWidth: 280, aspectRatio: '4/3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          marginTop: 8,
+          background: '#181818',
+          border: '0.5px solid #222',
+          borderRadius: 16,
+          width: '100%',
+          maxWidth: 280,
+          aspectRatio: '4/3',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <div style={{ border: '1.5px solid #2a2a2a', borderRadius: 8, width: '75%', height: '75%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ fontSize: 12, color: '#333', ...sans }}>Camera coming soon</span>
         </div>
       </div>
-      <button onClick={() => navigate('/search')} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '11px 24px', fontSize: 13, color: '#666', cursor: 'pointer', ...sans, marginTop: 8 }}>
+      <button
+        onClick={() => navigate('/search')}
+        style={{ background: 'transparent', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '11px 24px', fontSize: 13, color: '#666', cursor: 'pointer', ...sans, marginTop: 8 }}
+      >
         Search manually instead
+      </button>
+      <button onClick={() => navigate('/add-product')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0, marginTop: 4 }}>
+        Can't find it? Add a product
       </button>
     </div>
   )
