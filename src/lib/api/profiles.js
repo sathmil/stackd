@@ -43,3 +43,16 @@ export async function fetchListsForUser(userId) {
 export async function updateProfile(userId, fields) {
   return supabase.from('profiles').update(fields).eq('id', userId).select().single()
 }
+
+/**
+ * Distinct existing location strings, for the profile edit form's
+ * autocomplete -- same idea as the brand autocomplete in AddProduct.jsx:
+ * steers people toward reusing an existing value ("San Francisco") instead
+ * of a near-duplicate spelling, which matters once location-based search
+ * gets built (freeform text that never converges can't be searched well).
+ */
+export async function fetchDistinctLocations() {
+  const { data, error } = await supabase.from('public_profiles').select('location').not('location', 'is', null)
+  if (error) return { data: null, error }
+  return { data: [...new Set(data.map((r) => r.location))].sort(), error: null }
+}
