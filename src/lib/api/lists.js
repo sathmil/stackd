@@ -5,14 +5,33 @@ export async function fetchOwnLists(userId) {
   return supabase.from('lists').select('*, list_items(count)').eq('user_id', userId).order('created_at', { ascending: false })
 }
 
+/**
+ * Which of a user's own lists already contain a given variant, and the
+ * list_item id for each -- lets the "add to list" picker show current
+ * membership and remove without a separate lookup.
+ * @param {string[]} listIds
+ * @param {string} variantId
+ */
+export async function fetchListMembership(listIds, variantId) {
+  if (listIds.length === 0) return { data: [], error: null }
+  return supabase.from('list_items').select('id, list_id').eq('variant_id', variantId).in('list_id', listIds)
+}
+
 /** @param {string} listId */
 export async function fetchListById(listId) {
   return supabase.from('lists').select('*').eq('id', listId).maybeSingle()
 }
 
-/** @param {string} listId */
+/**
+ * Embeds every review on each variant (not filtered to the list owner --
+ * PostgREST can't filter two embed levels deep in one query) so the caller
+ * can pick out the owner's own overall_rating and sort by it client-side.
+ * Still ordered by rank_position (insertion order) as the base order, which
+ * becomes the stable tiebreak for equal/missing ratings after that sort.
+ * @param {string} listId
+ */
 export async function fetchListItems(listId) {
-  return supabase.from('list_items').select('*, product_variants(*, products(*))').eq('list_id', listId).order('rank_position', { ascending: true })
+  return supabase.from('list_items').select('*, product_variants(*, products(*), reviews(user_id, overall_rating))').eq('list_id', listId).order('rank_position', { ascending: true })
 }
 
 /** @param {{ userId: string, name: string, isPublic: boolean }} params */
@@ -28,19 +47,6 @@ export async function deleteList(listId) {
 /** @param {string} listId @param {boolean} isPublic */
 export async function updateListVisibility(listId, isPublic) {
   return supabase.from('lists').update({ is_public: isPublic }).eq('id', listId).select().single()
-}
-
-/**
- * Swaps rank_position between two items -- used by the up/down move
- * buttons. Two updates rather than one to avoid violating the
- * (list_id, vacant rank) uniqueness expectations mid-write.
- * @param {{ id: string, rank_position: number }} itemA
- * @param {{ id: string, rank_position: number }} itemB
- */
-export async function swapListItemRanks(itemA, itemB) {
-  const { error: errA } = await supabase.from('list_items').update({ rank_position: itemB.rank_position }).eq('id', itemA.id)
-  if (errA) return { error: errA }
-  return supabase.from('list_items').update({ rank_position: itemA.rank_position }).eq('id', itemB.id)
 }
 
 /**

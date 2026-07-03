@@ -5,7 +5,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById, fetchRatingSummaries } from '../lib/api/products'
 import { fetchReviewsForVariant, fetchProfilesByIds, fetchTagsForReviews, deleteReview } from '../lib/api/reviews'
-import { fetchOwnLists, createList, addListItem } from '../lib/api/lists'
+import { fetchOwnLists, fetchListMembership, createList, addListItem, removeListItem } from '../lib/api/lists'
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
@@ -30,7 +30,7 @@ export default function ProductPage() {
   const [deleting, setDeleting] = useState(false)
   const [showListPicker, setShowListPicker] = useState(false)
   const [ownLists, setOwnLists] = useState(null)
-  const [addedToListId, setAddedToListId] = useState(null)
+  const [membership, setMembership] = useState({}) // listId -> list_item id, for lists that already contain this variant
   const [newListName, setNewListName] = useState('')
   const [newListPublic, setNewListPublic] = useState(true)
   const [creatingList, setCreatingList] = useState(false)
@@ -38,20 +38,38 @@ export default function ProductPage() {
   const openListPicker = async () => {
     setShowListPicker((v) => !v)
     if (!ownLists && user) {
-      const { data } = await fetchOwnLists(user.id)
-      setOwnLists(data || [])
+      const { data: lists } = await fetchOwnLists(user.id)
+      setOwnLists(lists || [])
+      const { data: items } = await fetchListMembership(
+        (lists || []).map((l) => l.id),
+        variantId,
+      )
+      setMembership(Object.fromEntries((items || []).map((i) => [i.list_id, i.id])))
     }
   }
 
-  const handleAddToList = async (listId, variantId) => {
-    const { error } = await addListItem(listId, variantId)
-    if (!error) {
-      setAddedToListId(listId)
-      trackEvent('list_item_add', { list_id: listId, variant_id: variantId })
+  const handleToggleList = async (listId, targetVariantId) => {
+    const itemId = membership[listId]
+    if (itemId) {
+      const { error } = await removeListItem(itemId)
+      if (!error) {
+        setMembership((m) => {
+          const next = { ...m }
+          delete next[listId]
+          return next
+        })
+        trackEvent('list_item_remove', { list_id: listId, variant_id: targetVariantId })
+      }
+    } else {
+      const { data: item, error } = await addListItem(listId, targetVariantId)
+      if (!error) {
+        setMembership((m) => ({ ...m, [listId]: item.id }))
+        trackEvent('list_item_add', { list_id: listId, variant_id: targetVariantId })
+      }
     }
   }
 
-  const handleCreateAndAdd = async (variantId) => {
+  const handleCreateAndAdd = async (targetVariantId) => {
     if (!newListName.trim()) return
     setCreatingList(true)
     const { data: list, error } = await createList({ userId: user.id, name: newListName.trim(), isPublic: newListPublic })
@@ -60,7 +78,11 @@ export default function ProductPage() {
       trackEvent('list_create', { list_id: list.id, is_public: newListPublic })
       setOwnLists((prev) => [list, ...(prev || [])])
       setNewListName('')
-      handleAddToList(list.id, variantId)
+      const { data: item, error: addErr } = await addListItem(list.id, targetVariantId)
+      if (!addErr) {
+        setMembership((m) => ({ ...m, [list.id]: item.id }))
+        trackEvent('list_item_add', { list_id: list.id, variant_id: targetVariantId })
+      }
     }
   }
 
@@ -228,25 +250,34 @@ export default function ProductPage() {
               <div style={{ marginTop: 10, background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {ownLists === null && <div style={{ fontSize: 12, color: '#3a3a3a', ...sans }}>Loading your lists...</div>}
                 {ownLists?.length === 0 && <div style={{ fontSize: 12, color: '#3a3a3a', ...sans }}>You don't have any lists yet -- make one below.</div>}
-                {ownLists?.map((list) => (
-                  <button
-                    key={list.id}
-                    onClick={() => handleAddToList(list.id, variant.id)}
-                    disabled={addedToListId === list.id}
-                    style={{
-                      textAlign: 'left',
-                      background: 'none',
-                      border: 'none',
-                      cursor: addedToListId === list.id ? 'default' : 'pointer',
-                      fontSize: 13,
-                      color: addedToListId === list.id ? '#5ecfcf' : '#ccc',
-                      ...sans,
-                      padding: '6px 0',
-                    }}
-                  >
-                    {addedToListId === list.id ? `Added to ${list.name}` : list.name}
-                  </button>
-                ))}
+                {ownLists?.map((list) => {
+                  const isAdded = !!membership[list.id]
+                  return (
+                    <div key={list.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ flex: 1, fontSize: 13, color: '#ccc', ...sans }}>
+                        {list.name}
+                        {isAdded && <span style={{ color: '#5ecfcf', fontSize: 11, marginLeft: 6 }}>(Added)</span>}
+                      </span>
+                      <button
+                        onClick={() => handleToggleList(list.id, variant.id)}
+                        style={{
+                          background: isAdded ? 'transparent' : '#f0ece4',
+                          color: isAdded ? '#ff6b6b' : '#111',
+                          border: isAdded ? '0.5px solid #3a1a1a' : 'none',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: 11,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          ...sans,
+                        }}
+                      >
+                        {isAdded ? 'Remove' : 'Add'}
+                      </button>
+                    </div>
+                  )
+                })}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input
                     value={newListName}
