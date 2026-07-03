@@ -4,7 +4,7 @@ import { Avatar, ScorePill, Card, Divider, NavBar } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById, fetchRatingSummaries } from '../lib/api/products'
-import { fetchReviewsForVariant, fetchProfilesByIds, fetchTagsForReviews, deleteReview } from '../lib/api/reviews'
+import { fetchReviewsForVariant, fetchProfilesByIds, fetchTagsForReviews, deleteReview, reportReview } from '../lib/api/reviews'
 import { fetchOwnLists, fetchListMembership, createList, addListItem, removeListItem } from '../lib/api/lists'
 import { trackEvent } from '../lib/analytics'
 
@@ -34,6 +34,10 @@ export default function ProductPage() {
   const [newListName, setNewListName] = useState('')
   const [newListPublic, setNewListPublic] = useState(true)
   const [creatingList, setCreatingList] = useState(false)
+  const [reportingId, setReportingId] = useState(null)
+  const [reportReason, setReportReason] = useState('')
+  const [submittingReport, setSubmittingReport] = useState(false)
+  const [reportedIds, setReportedIds] = useState(new Set())
 
   const openListPicker = async () => {
     setShowListPicker((v) => !v)
@@ -148,6 +152,22 @@ export default function ProductPage() {
     await deleteReview(ownReview.id)
     setDeleting(false)
     refetch()
+  }
+
+  const toggleReport = (reviewId) => {
+    setReportingId((id) => (id === reviewId ? null : reviewId))
+    setReportReason('')
+  }
+
+  const handleSubmitReport = async (reviewId) => {
+    setSubmittingReport(true)
+    const { error: reportError } = await reportReview(reviewId, user.id, reportReason)
+    setSubmittingReport(false)
+    // 23505 = unique_violation -- already reported this review, treat as success
+    if (!reportError || reportError.code === '23505') {
+      setReportedIds((ids) => new Set(ids).add(reviewId))
+      setReportingId(null)
+    }
   }
 
   const nutrition = NUTRITION_FIELDS.filter(([key]) => variant[key] != null)
@@ -387,6 +407,48 @@ export default function ProductPage() {
                   >
                     {deleting ? 'Deleting...' : 'Delete'}
                   </button>
+                </div>
+              )}
+
+              {!isOwn && user && (
+                <div>
+                  {reportedIds.has(review.id) ? (
+                    <span style={{ fontSize: 11, color: '#3a3a3a', ...sans }}>Reported</span>
+                  ) : (
+                    <button onClick={() => toggleReport(review.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#3a3a3a', ...sans, padding: 0 }}>
+                      {reportingId === review.id ? 'Cancel' : 'Report'}
+                    </button>
+                  )}
+
+                  {reportingId === review.id && (
+                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <input
+                        value={reportReason}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        placeholder="What's wrong with this review? (optional)"
+                        style={{ background: '#1a1a1a', border: '0.5px solid #252525', borderRadius: 8, padding: '8px 10px', fontSize: 12, color: '#ccc', outline: 'none', ...sans }}
+                      />
+                      <button
+                        onClick={() => handleSubmitReport(review.id)}
+                        disabled={submittingReport}
+                        style={{
+                          alignSelf: 'flex-start',
+                          background: 'none',
+                          border: '0.5px solid #3a1a1a',
+                          color: '#ff6b6b',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: 11,
+                          fontWeight: 500,
+                          cursor: submittingReport ? 'default' : 'pointer',
+                          opacity: submittingReport ? 0.5 : 1,
+                          ...sans,
+                        }}
+                      >
+                        {submittingReport ? 'Submitting...' : 'Submit report'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

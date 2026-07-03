@@ -81,3 +81,15 @@ export async function syncReviewTags(reviewId, tagIds) {
 export async function deleteReview(reviewId) {
   return supabase.from('reviews').delete().eq('id', reviewId)
 }
+
+/**
+ * No select policy on review_reports -- moderation happens by reading the
+ * table directly in Studio, not through the app. A unique(review_id,
+ * reporter_id) constraint on the table stops the same person reporting the
+ * same review twice; the caller should treat a unique-violation error as
+ * "already reported" rather than a real failure.
+ * @param {string} reviewId @param {string} reporterId @param {string} reason
+ */
+export async function reportReview(reviewId, reporterId, reason) {
+  return supabase.from('review_reports').insert({ review_id: reviewId, reporter_id: reporterId, reason: reason || null })
+}
