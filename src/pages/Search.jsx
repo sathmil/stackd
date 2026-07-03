@@ -1,80 +1,183 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { products, CATEGORIES } from '../data/placeholder'
+import { CATEGORIES } from '../data/placeholder'
 import { ScorePill, SectionLabel, Chip } from '../components/ui'
+import { useAsync } from '../hooks/useAsync'
+import { fetchApprovedVariants, fetchRatingSummaries } from '../lib/api/products'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans  = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
-const FRIEND_TRIED = { p1: 3, p2: 1, p6: 2 }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
-function ProductRow({ product }) {
+const CATEGORY_DB_VALUES = {
+  Energy: ['energy_drink'],
+  Protein: ['protein_bar', 'protein_powder'],
+  Supps: ['supplement', 'pre_workout'],
+  Greens: ['greens_powder'],
+  Snacks: ['snack'],
+}
+
+const SORTS = [
+  ['popular', 'Popular'],
+  ['rating', 'Highest-rated'],
+  ['newest', 'Newest'],
+]
+
+const PAGE_SIZE = 10
+
+function formatCategory(raw) {
+  return raw.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}
+
+function sortVariants(variants, sort) {
+  if (sort === 'newest') {
+    return [...variants].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  }
+  if (sort === 'rating') {
+    const eligible = variants.filter((v) => (v.summary?.ratings_count || 0) >= 3)
+    const rest = variants.filter((v) => (v.summary?.ratings_count || 0) < 3)
+    eligible.sort((a, b) => (b.summary?.overall_score || 0) - (a.summary?.overall_score || 0))
+    rest.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    return [...eligible, ...rest]
+  }
+  // popular
+  return [...variants].sort((a, b) => (b.summary?.ratings_count || 0) - (a.summary?.ratings_count || 0))
+}
+
+function ProductRow({ variant }) {
   const navigate = useNavigate()
-  const friendCount = FRIEND_TRIED[product.id] || 0
+  const product = variant.products
+  const summary = variant.summary
   return (
-    <div onClick={() => navigate(`/product/${product.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '0.5px solid #1a1a1a', cursor: 'pointer' }}>
-      <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{product.icon}</div>
+    <div onClick={() => navigate(`/product/${variant.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '0.5px solid #1a1a1a', cursor: 'pointer' }}>
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          background: '#1a1a1a',
+          border: '0.5px solid #222',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 14,
+          color: '#4a4a4a',
+          flexShrink: 0,
+          ...serif,
+        }}
+      >
+        {product.name.charAt(0)}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{product.name}</div>
+        <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+          {product.name}
+          {variant.flavor ? ` — ${variant.flavor}` : ''}
+        </div>
         <div style={{ fontSize: 11, color: '#4a4a4a', ...sans, marginTop: 2 }}>
-          {product.category}
-          {friendCount > 0
-            ? <span style={{ color: '#5ecfcf' }}> · {friendCount} friend{friendCount > 1 ? 's' : ''} tried</span>
-            : <span> · {product.ratingsCount.toLocaleString()} ratings</span>
-          }
+          {product.brand_name} · {formatCategory(product.category)}
         </div>
       </div>
-      {friendCount > 0 && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#5ecfcf', flexShrink: 0 }} />}
-      <ScorePill score={product.overallScore} />
+      {summary?.ratings_count ? <ScorePill score={summary.overall_score} /> : <span style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>New</span>}
     </div>
   )
 }
 
 export default function Search() {
   const [query, setQuery] = useState('')
-  const [cat, setCat]     = useState('All')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [cat, setCat] = useState('All')
+  const [sort, setSort] = useState('popular')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  const filtered = products.filter(p => {
-    const q = query.toLowerCase()
-    const matchQ = !q || p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
-    const matchC = cat === 'All' || p.category.toLowerCase().includes(cat.toLowerCase())
-    return matchQ && matchC
-  })
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query), 300)
+    return () => clearTimeout(id)
+  }, [query])
 
-  const friendTried = filtered.filter(p => FRIEND_TRIED[p.id])
-  const rest        = filtered.filter(p => !FRIEND_TRIED[p.id]).sort((a, b) => b.overallScore - a.overallScore)
+  useEffect(() => setVisibleCount(PAGE_SIZE), [debouncedQuery, cat, sort])
+
+  const {
+    data: variants,
+    loading,
+    error,
+  } = useAsync(async () => {
+    const { data: rows, error } = await fetchApprovedVariants({
+      query: debouncedQuery,
+      categories: cat === 'All' ? null : CATEGORY_DB_VALUES[cat],
+    })
+    if (error) return { data: null, error }
+    const ids = (rows || []).map((v) => v.id)
+    const { data: summaries } = await fetchRatingSummaries(ids)
+    const summaryMap = Object.fromEntries((summaries || []).map((s) => [s.variant_id, s]))
+    return { data: (rows || []).map((v) => ({ ...v, summary: summaryMap[v.id] || null })), error: null }
+  }, [debouncedQuery, cat])
+
+  const sorted = useMemo(() => sortVariants(variants || [], sort), [variants, sort])
+  const visible = sorted.slice(0, visibleCount)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 14px', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#181818', border: '0.5px solid #222', borderRadius: 20, padding: '10px 14px' }}>
           <span style={{ fontSize: 16, color: '#3a3a3a' }}>⌕</span>
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search products, brands..."
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 14, color: '#ccc', ...sans }} />
-          {query && <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3a3a3a', fontSize: 16, padding: 0 }}>✕</button>}
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search products, brands..."
+            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 14, color: '#ccc', ...sans }}
+          />
+          {query && (
+            <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3a3a3a', fontSize: 16, padding: 0 }}>
+              ✕
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
-          {CATEGORIES.map(c => <Chip key={c} label={c} active={cat === c} onClick={() => setCat(c)} />)}
+          {CATEGORIES.map((c) => (
+            <Chip key={c} label={c} active={cat === c} onClick={() => setCat(c)} />
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+          {SORTS.map(([key, label]) => (
+            <Chip key={key} label={label} active={sort === key} onClick={() => setSort(key)} />
+          ))}
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {query === '' ? (
+        {loading && <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>}
+
+        {error && <div style={{ textAlign: 'center', padding: '48px 0', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load the catalog. Try again in a moment.</div>}
+
+        {!loading && !error && sorted.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {debouncedQuery ? (
+              <>
+                <div>No products found for "{debouncedQuery}".</div>
+                <div style={{ color: '#5ecfcf' }}>Can't find it? Add a product.</div>
+              </>
+            ) : (
+              <div>Nothing in the catalog yet.</div>
+            )}
+          </div>
+        )}
+
+        {!loading && !error && sorted.length > 0 && (
           <>
-            {friendTried.length > 0 && <>
-              <SectionLabel>Friends tried</SectionLabel>
-              {friendTried.map(p => <ProductRow key={p.id} product={p} />)}
-              <div style={{ height: 8 }} />
-            </>}
-            <SectionLabel>Trending this week</SectionLabel>
-            {rest.map(p => <ProductRow key={p.id} product={p} />)}
+            <SectionLabel>
+              {sorted.length} product{sorted.length !== 1 ? 's' : ''}
+            </SectionLabel>
+            {visible.map((v) => (
+              <ProductRow key={v.id} variant={v} />
+            ))}
+            {visibleCount < sorted.length && (
+              <button
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                style={{ background: 'none', border: '0.5px solid #222', borderRadius: 20, padding: '10px 0', fontSize: 13, color: '#888', cursor: 'pointer', ...sans, marginTop: 8 }}
+              >
+                Load more
+              </button>
+            )}
           </>
-        ) : filtered.length > 0 ? (
-          <>
-            <SectionLabel>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</SectionLabel>
-            {filtered.map(p => <ProductRow key={p.id} product={p} />)}
-          </>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>No products found for "{query}"</div>
         )}
       </div>
     </div>

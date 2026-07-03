@@ -1,11 +1,46 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { getTestClient, serviceClient } from './helpers.js'
 
 let userA, userB
+// Dedicated fixtures owned by userA, isolated from the real seeded catalog --
+// tests must never grab "whatever the first row happens to be" (that
+// previously left permanent test pollution in the real dev database: a
+// stray "RLS Test Product" row, an accumulating "Zero Review Test" variant
+// created fresh on every run, and 3 real seeded products left with a fake
+// ai_ingredient_quality_score/ai_analysis_status = 'succeeded' they never
+// actually earned).
+let testProductId, testVariantId
+// Anything a single test creates beyond the shared fixture above, cleaned
+// up alongside it.
+const extraProductIds = []
+const extraVariantIds = []
 
 beforeAll(async () => {
   userA = await getTestClient(0)
   userB = await getTestClient(1)
+
+  const { data: userAId } = await userA.auth.getUser()
+  const { data: product } = await userA
+    .from('products')
+    .insert({ brand_name: 'RLS Test Fixtures', name: `Test Product ${Date.now()}`, category: 'other', created_by: userAId.user.id })
+    .select()
+    .single()
+  testProductId = product.id
+
+  const { data: variant } = await userA.from('product_variants').insert({ product_id: testProductId, flavor: 'Test Variant', created_by: userAId.user.id }).select().single()
+  testVariantId = variant.id
+})
+
+afterAll(async () => {
+  const admin = serviceClient()
+  // cascades clean up variants/reviews/list_items/review_tags tied to these
+  await admin
+    .from('products')
+    .delete()
+    .in('id', [testProductId, ...extraProductIds])
+  if (extraVariantIds.length > 0) {
+    await admin.from('product_variants').delete().in('id', extraVariantIds)
+  }
 })
 
 describe('products / product_variants moderation visibility', () => {
@@ -19,6 +54,7 @@ describe('products / product_variants moderation visibility', () => {
       .single()
     expect(error).toBeNull()
     expect(product.status).toBe('pending')
+    extraProductIds.push(product.id)
 
     const { data: ownView } = await userA.from('products').select().eq('id', product.id)
     expect(ownView).toHaveLength(1)
@@ -31,26 +67,24 @@ describe('products / product_variants moderation visibility', () => {
 describe('reviews', () => {
   it('upserting a review for the same (variant_id, user_id) updates rather than duplicates', async () => {
     const { data: userAId } = await userA.auth.getUser()
-    const { data: variants } = await userA.from('product_variants').select('id').limit(1)
-    const variantId = variants[0].id
 
     const first = await userA
       .from('reviews')
-      .upsert({ variant_id: variantId, user_id: userAId.user.id, taste_rating: 4.0, value_effectiveness_rating: 4.0 }, { onConflict: 'variant_id,user_id' })
+      .upsert({ variant_id: testVariantId, user_id: userAId.user.id, taste_rating: 4.0, value_effectiveness_rating: 4.0 }, { onConflict: 'variant_id,user_id' })
       .select()
       .single()
     expect(first.error).toBeNull()
 
     const second = await userA
       .from('reviews')
-      .upsert({ variant_id: variantId, user_id: userAId.user.id, taste_rating: 4.5, value_effectiveness_rating: 3.5 }, { onConflict: 'variant_id,user_id' })
+      .upsert({ variant_id: testVariantId, user_id: userAId.user.id, taste_rating: 4.5, value_effectiveness_rating: 3.5 }, { onConflict: 'variant_id,user_id' })
       .select()
       .single()
     expect(second.error).toBeNull()
     expect(second.data.id).toBe(first.data.id)
     expect(Number(second.data.taste_rating)).toBe(4.5)
 
-    const { data: allMine } = await userA.from('reviews').select().eq('variant_id', variantId)
+    const { data: allMine } = await userA.from('reviews').select().eq('variant_id', testVariantId)
     expect(allMine).toHaveLength(1)
   })
 })
@@ -68,8 +102,7 @@ describe('lists / list_items privacy', () => {
     const { data: otherView } = await userB.from('lists').select().eq('id', list.id)
     expect(otherView).toHaveLength(0)
 
-    const { data: variants } = await userA.from('product_variants').select('id').limit(1)
-    const { error: otherInsertError } = await userB.from('list_items').insert({ list_id: list.id, variant_id: variants[0].id, rank_position: 1 })
+    const { error: otherInsertError } = await userB.from('list_items').insert({ list_id: list.id, variant_id: testVariantId, rank_position: 1 })
     expect(otherInsertError).not.toBeNull()
   })
 })
@@ -90,29 +123,21 @@ describe('profiles', () => {
 
 describe('AI field protection', () => {
   it('a non-service-role client cannot change ai_ingredient_* fields directly', async () => {
-    const { data: variant } = await userA.from('product_variants').select('id, product_id, ai_ingredient_quality_score').limit(1).single()
+    const before = await userA.from('product_variants').select('ai_ingredient_quality_score').eq('id', testVariantId).single()
 
-    // only allowed if this row was created by userA -- create one to be sure
-    const { data: userAId } = await userA.auth.getUser()
-    const { data: ownVariant } = await userA.from('product_variants').select('id').eq('created_by', userAId.user.id).limit(1).maybeSingle()
+    await userA.from('product_variants').update({ ai_ingredient_quality_score: 5.0 }).eq('id', testVariantId)
 
-    const targetId = ownVariant?.id ?? variant.id
-    const before = await userA.from('product_variants').select('ai_ingredient_quality_score').eq('id', targetId).single()
-
-    await userA.from('product_variants').update({ ai_ingredient_quality_score: 5.0 }).eq('id', targetId)
-
-    const after = await userA.from('product_variants').select('ai_ingredient_quality_score').eq('id', targetId).single()
+    const after = await userA.from('product_variants').select('ai_ingredient_quality_score').eq('id', testVariantId).single()
     expect(after.data.ai_ingredient_quality_score).toBe(before.data.ai_ingredient_quality_score)
   })
 
   it('the service role CAN set ai_ingredient_* fields (this is how Phase 8 writes)', async () => {
     const admin = serviceClient()
-    const { data: variant } = await admin.from('product_variants').select('id').limit(1).single()
 
-    const { error } = await admin.from('product_variants').update({ ai_ingredient_quality_score: 4.2, ai_analysis_status: 'succeeded' }).eq('id', variant.id)
+    const { error } = await admin.from('product_variants').update({ ai_ingredient_quality_score: 4.2, ai_analysis_status: 'succeeded' }).eq('id', testVariantId)
     expect(error).toBeNull()
 
-    const { data: after } = await admin.from('product_variants').select('ai_ingredient_quality_score').eq('id', variant.id).single()
+    const { data: after } = await admin.from('product_variants').select('ai_ingredient_quality_score').eq('id', testVariantId).single()
     expect(Number(after.ai_ingredient_quality_score)).toBe(4.2)
   })
 })
@@ -122,13 +147,10 @@ describe('variant_rating_summary', () => {
     const { data: userAId } = await userA.auth.getUser()
     const { data: variant } = await userA
       .from('product_variants')
-      .insert({
-        product_id: (await userA.from('products').select('id').limit(1).single()).data.id,
-        flavor: `Zero Review Test ${Date.now()}`,
-        created_by: userAId.user.id,
-      })
+      .insert({ product_id: testProductId, flavor: `Zero Review Test ${Date.now()}`, created_by: userAId.user.id })
       .select()
       .single()
+    extraVariantIds.push(variant.id)
 
     const { data: summary, error } = await userA.from('variant_rating_summary').select().eq('variant_id', variant.id).maybeSingle()
     expect(error).toBeNull()
