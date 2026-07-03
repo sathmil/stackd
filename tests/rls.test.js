@@ -72,21 +72,13 @@ describe('reviews', () => {
   it('upserting a review for the same (variant_id, user_id) updates rather than duplicates', async () => {
     const { data: userAId } = await userA.auth.getUser()
 
-    const first = await userA
-      .from('reviews')
-      .upsert({ variant_id: testVariantId, user_id: userAId.user.id, taste_rating: 4.0, value_effectiveness_rating: 4.0 }, { onConflict: 'variant_id,user_id' })
-      .select()
-      .single()
+    const first = await userA.from('reviews').upsert({ variant_id: testVariantId, user_id: userAId.user.id, overall_rating: 8.0 }, { onConflict: 'variant_id,user_id' }).select().single()
     expect(first.error).toBeNull()
 
-    const second = await userA
-      .from('reviews')
-      .upsert({ variant_id: testVariantId, user_id: userAId.user.id, taste_rating: 4.5, value_effectiveness_rating: 3.5 }, { onConflict: 'variant_id,user_id' })
-      .select()
-      .single()
+    const second = await userA.from('reviews').upsert({ variant_id: testVariantId, user_id: userAId.user.id, overall_rating: 9.0 }, { onConflict: 'variant_id,user_id' }).select().single()
     expect(second.error).toBeNull()
     expect(second.data.id).toBe(first.data.id)
-    expect(Number(second.data.taste_rating)).toBe(4.5)
+    expect(Number(second.data.overall_rating)).toBe(9.0)
 
     const { data: allMine } = await userA.from('reviews').select().eq('variant_id', testVariantId)
     expect(allMine).toHaveLength(1)

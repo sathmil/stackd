@@ -44,17 +44,16 @@ export async function fetchOwnReview(variantId, userId) {
 /**
  * One review per (variant_id, user_id) -- upsert so re-rating updates
  * rather than erroring or duplicating.
- * @param {{ variantId: string, userId: string, tasteRating: number, valueEffectivenessRating: number, wouldBuyAgain: boolean|null, notes: string }} params
+ * @param {{ variantId: string, userId: string, overallRating: number, wouldBuyAgain: boolean|null, notes: string }} params
  */
-export async function upsertReview({ variantId, userId, tasteRating, valueEffectivenessRating, wouldBuyAgain, notes }) {
+export async function upsertReview({ variantId, userId, overallRating, wouldBuyAgain, notes }) {
   return supabase
     .from('reviews')
     .upsert(
       {
         variant_id: variantId,
         user_id: userId,
-        taste_rating: tasteRating,
-        value_effectiveness_rating: valueEffectivenessRating,
+        overall_rating: overallRating,
         would_buy_again: wouldBuyAgain,
         notes: notes || null,
       },

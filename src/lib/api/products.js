@@ -28,6 +28,11 @@ export async function fetchRatingSummaries(variantIds) {
   return supabase.from('variant_rating_summary').select('*').in('variant_id', variantIds)
 }
 
+/** All brand names, for the add-product form's autocomplete -- steers people toward an existing brand instead of typing a near-duplicate. */
+export async function fetchAllBrands() {
+  return supabase.from('brands').select('id, name').order('name')
+}
+
 /**
  * Case-insensitive lookup, creates one if no match -- avoids near-duplicate
  * brand rows for casing/whitespace variants of the same real brand.

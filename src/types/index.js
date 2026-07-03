@@ -26,6 +26,7 @@
  * @property {number|null} calories
  * @property {number|null} protein_g
  * @property {number|null} sugar_g
+ * @property {number|null} fiber_g
  * @property {number|null} caffeine_mg
  * @property {string|null} ingredients_text
  * @property {number|null} ai_ingredient_quality_score
@@ -40,8 +41,7 @@
  * @property {string} id
  * @property {string} variant_id
  * @property {string} user_id
- * @property {number} taste_rating
- * @property {number} value_effectiveness_rating
+ * @property {number} overall_rating
  * @property {boolean|null} would_buy_again
  * @property {string|null} notes
  * @property {'visible'|'flagged'|'removed'} status

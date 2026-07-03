@@ -237,6 +237,7 @@ create table product_variants (
   protein_g      numeric(5,1),
   sugar_g        numeric(5,1),
   carbs_g        numeric(5,1),
+  fiber_g        numeric(5,1),
   fat_g          numeric(5,1),
   caffeine_mg    numeric(6,1),
   sodium_mg      numeric(6,1),
@@ -253,7 +254,7 @@ create table product_variants (
   -- raw ingredient list + AI analysis of it (ingredient quality is
   -- AI-computed, not user-submitted -- see reviews table below)
   ingredients_text          text,
-  ai_ingredient_quality_score numeric(2,1) check (ai_ingredient_quality_score between 1.0 and 5.0),
+  ai_ingredient_quality_score numeric(3,1) check (ai_ingredient_quality_score between 1.0 and 10.0),
   ai_ingredient_summary     text,
   ai_ingredient_flags       jsonb not null default '[]',
   ai_ingredient_analyzed_at timestamptz,
@@ -361,11 +362,13 @@ create table reviews (
   variant_id                  uuid not null references product_variants(id) on delete cascade,
   user_id                     uuid not null references auth.users(id) on delete cascade,
 
-  -- both user-submitted. Ingredient quality is intentionally NOT here --
-  -- it's AI-computed on the variant (see product_variants above), shared
-  -- across everyone who reviews that variant rather than a personal score.
-  taste_rating                numeric(2,1) not null check (taste_rating between 1.0 and 5.0),
-  value_effectiveness_rating  numeric(2,1) not null check (value_effectiveness_rating between 1.0 and 5.0),
+  -- single subjective score, 1-10 -- deliberately not split into taste /
+  -- value / etc sub-dimensions: one number is faster to give and reduces
+  -- ambiguity, which matters more for review volume than granularity does
+  -- at this stage. Ingredient quality is intentionally NOT here -- it's
+  -- AI-computed on the variant (see product_variants above) and shown as
+  -- objective info, not blended into anyone's personal rating.
+  overall_rating               numeric(3,1) not null check (overall_rating between 1.0 and 10.0),
 
   would_buy_again             boolean,
   notes                       text,
@@ -603,19 +606,8 @@ create view variant_rating_summary with (security_invoker = true) as
 select
   v.id as variant_id,
   count(r.id) as ratings_count,
-  round(avg(r.taste_rating), 1) as avg_taste,
-  round(avg(r.value_effectiveness_rating), 1) as avg_value_effectiveness,
+  round(avg(r.overall_rating), 1) as overall_score,
   v.ai_ingredient_quality_score,
-  round(
-    (coalesce(avg(r.taste_rating), 0) + coalesce(avg(r.value_effectiveness_rating), 0) + coalesce(v.ai_ingredient_quality_score, 0))
-    / nullif(
-        (avg(r.taste_rating) is not null)::int
-        + (avg(r.value_effectiveness_rating) is not null)::int
-        + (v.ai_ingredient_quality_score is not null)::int,
-        0
-      ),
-    1
-  ) as overall_score,
   round(100.0 * sum(case when r.would_buy_again then 1 else 0 end) / nullif(count(r.id), 0), 0) as buy_again_pct
 from product_variants v
 left join reviews r on r.variant_id = v.id and r.status = 'visible'

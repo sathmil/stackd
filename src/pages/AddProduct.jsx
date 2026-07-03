@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NavBar } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { fetchOrCreateBrand, createProduct, createProductVariant, fetchFeatureFlag } from '../lib/api/products'
+import { fetchOrCreateBrand, createProduct, createProductVariant, fetchFeatureFlag, fetchAllBrands } from '../lib/api/products'
 import { compressImage, uploadImage } from '../lib/storage'
 import { trackEvent } from '../lib/analytics'
 
@@ -49,21 +49,23 @@ export default function AddProduct() {
   const user = useCurrentUser()
 
   const { data: flagData, loading: flagLoading } = useAsync(() => fetchFeatureFlag('product_submission'), [])
+  const { data: brands } = useAsync(() => fetchAllBrands(), [])
 
   const [brandName, setBrandName] = useState('')
   const [productName, setProductName] = useState('')
   const [category, setCategory] = useState('energy_drink')
   const [description, setDescription] = useState('')
   const [flavor, setFlavor] = useState('')
-  const [size, setSize] = useState('')
   const [calories, setCalories] = useState('')
   const [proteinG, setProteinG] = useState('')
   const [sugarG, setSugarG] = useState('')
+  const [fiberG, setFiberG] = useState('')
   const [caffeineMg, setCaffeineMg] = useState('')
   const [ingredientsText, setIngredientsText] = useState('')
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [imageAlt, setImageAlt] = useState('')
+  const fileInputRef = useRef(null)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -74,6 +76,13 @@ export default function AddProduct() {
     if (!file) return
     setImageFile(file)
     setImagePreview(URL.createObjectURL(file))
+  }
+
+  const handleRemoveImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    setImageAlt('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleSubmit = async () => {
@@ -126,11 +135,11 @@ export default function AddProduct() {
     const { data: variant, error: variantError } = await createProductVariant({
       product_id: product.id,
       flavor: flavor.trim() || null,
-      size: size.trim() || null,
       image_url: imageUrl,
       calories: calories === '' ? null : Number(calories),
       protein_g: proteinG === '' ? null : Number(proteinG),
       sugar_g: sugarG === '' ? null : Number(sugarG),
+      fiber_g: fiberG === '' ? null : Number(fiberG),
       caffeine_mg: caffeineMg === '' ? null : Number(caffeineMg),
       ingredients_text: ingredientsText.trim() || null,
       created_by: user.id,
@@ -186,7 +195,12 @@ export default function AddProduct() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Field label="Brand">
-          <input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="e.g. Celsius" style={inputStyle} />
+          <input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="e.g. Celsius" list="brand-options" style={inputStyle} />
+          <datalist id="brand-options">
+            {brands?.map((b) => (
+              <option key={b.id} value={b.name} />
+            ))}
+          </datalist>
         </Field>
 
         <Field label="Product name">
@@ -210,26 +224,22 @@ export default function AddProduct() {
         <div style={{ height: '0.5px', background: '#1e1e1e' }} />
         <div style={{ fontSize: 10, color: '#444', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>This variant</div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <Field label="Flavor (optional)">
-              <input value={flavor} onChange={(e) => setFlavor(e.target.value)} placeholder="e.g. Peach Vibe" style={inputStyle} />
-            </Field>
-          </div>
-          <div style={{ flex: 1 }}>
-            <Field label="Size (optional)">
-              <input value={size} onChange={(e) => setSize(e.target.value)} placeholder="e.g. 12 oz" style={inputStyle} />
-            </Field>
-          </div>
-        </div>
+        <Field label="Flavor (optional)">
+          <input value={flavor} onChange={(e) => setFlavor(e.target.value)} placeholder="e.g. Peach Vibe" style={inputStyle} />
+        </Field>
 
         <Field label="Photo (optional)">
-          <input type="file" accept="image/*" onChange={handleImageChange} style={{ fontSize: 12, color: '#888', ...sans }} />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ fontSize: 12, color: '#888', ...sans }} />
         </Field>
 
         {imagePreview && (
           <>
-            <img src={imagePreview} alt="" style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover' }} />
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+              <img src={imagePreview} alt="" style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover' }} />
+              <button onClick={handleRemoveImage} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#ff6b6b', ...sans, padding: 0 }}>
+                Remove photo
+              </button>
+            </div>
             <Field label="Describe the photo (required for accessibility)">
               <input value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="e.g. Can of Celsius Peach Vibe" style={inputStyle} />
             </Field>
@@ -256,11 +266,15 @@ export default function AddProduct() {
             </Field>
           </div>
           <div style={{ flex: 1 }}>
-            <Field label="Caffeine mg (optional)">
-              <input type="number" value={caffeineMg} onChange={(e) => setCaffeineMg(e.target.value)} style={inputStyle} />
+            <Field label="Fiber g (optional)">
+              <input type="number" value={fiberG} onChange={(e) => setFiberG(e.target.value)} style={inputStyle} />
             </Field>
           </div>
         </div>
+
+        <Field label="Caffeine mg (optional)">
+          <input type="number" value={caffeineMg} onChange={(e) => setCaffeineMg(e.target.value)} style={inputStyle} />
+        </Field>
 
         <Field label="Ingredients (optional)">
           <textarea value={ingredientsText} onChange={(e) => setIngredientsText(e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />

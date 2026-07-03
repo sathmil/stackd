@@ -54,23 +54,6 @@ export function ScorePill({ score, extraStyle }) {
   )
 }
 
-/** @param {{ dims: { key: string, label: string, value: number|null, color: string }[], max?: number }} props */
-export function ScoreBars({ dims, max = 5 }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {dims.map(({ key, label, value, color }) => (
-        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 90, flexShrink: 0, fontSize: 11, color: '#5a5a5a', ...sans }}>{label}</span>
-          <div style={{ flex: 1, height: 3, background: '#1e1e1e', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${((value || 0) / max) * 100}%`, background: color, borderRadius: 2 }} />
-          </div>
-          <span style={{ width: 28, textAlign: 'right', fontSize: 11, color, ...serif, fontWeight: 500 }}>{value != null ? value.toFixed(1) : '—'}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function BottomNav({ active, onNavigate }) {
   const items = [
     { key: 'feed', label: 'Feed', icon: '⌂' },
