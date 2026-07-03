@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { NavBar } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { fetchOrCreateBrand, createProduct, createProductVariant, fetchFeatureFlag, fetchAllBrands } from '../lib/api/products'
+import { fetchOrCreateBrand, createProduct, createProductVariant, updateProduct, updateProductVariant, fetchFeatureFlag, fetchAllBrands, fetchVariantById } from '../lib/api/products'
 import { compressImage, uploadImage } from '../lib/storage'
 import { trackEvent } from '../lib/analytics'
 
@@ -45,11 +45,14 @@ function Field({ label, children }) {
 }
 
 export default function AddProduct() {
+  const { variantId } = useParams()
+  const isEditing = !!variantId
   const navigate = useNavigate()
   const user = useCurrentUser()
 
-  const { data: flagData, loading: flagLoading } = useAsync(() => fetchFeatureFlag('product_submission'), [])
+  const { data: flagData, loading: flagLoading } = useAsync(() => (isEditing ? Promise.resolve({ data: null, error: null }) : fetchFeatureFlag('product_submission')), [isEditing])
   const { data: brands } = useAsync(() => fetchAllBrands(), [])
+  const { data: existing, loading: existingLoading } = useAsync(() => (isEditing ? fetchVariantById(variantId) : Promise.resolve({ data: null, error: null })), [isEditing, variantId])
 
   const [brandName, setBrandName] = useState('')
   const [productName, setProductName] = useState('')
@@ -71,6 +74,26 @@ export default function AddProduct() {
   const [error, setError] = useState('')
   const [done, setDone] = useState(null)
 
+  useEffect(() => {
+    if (!existing) return
+    const product = existing.products
+    setBrandName(product.brands?.name || product.brand_name)
+    setProductName(product.name)
+    setCategory(product.category)
+    setDescription(product.description || '')
+    setFlavor(existing.flavor || '')
+    setCalories(existing.calories ?? '')
+    setProteinG(existing.protein_g ?? '')
+    setSugarG(existing.sugar_g ?? '')
+    setFiberG(existing.fiber_g ?? '')
+    setCaffeineMg(existing.caffeine_mg ?? '')
+    setIngredientsText(existing.ingredients_text || '')
+    if (existing.image_url) {
+      setImagePreview(existing.image_url)
+      setImageAlt(existing.image_alt || '')
+    }
+  }, [existing])
+
   const handleImageChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -91,7 +114,7 @@ export default function AddProduct() {
       setError('Brand and product name are required.')
       return
     }
-    if (imageFile && !imageAlt.trim()) {
+    if (imagePreview && !imageAlt.trim()) {
       setError('Add a short description of the image (alt text).')
       return
     }
@@ -102,6 +125,57 @@ export default function AddProduct() {
     if (brandError) {
       setSubmitting(false)
       setError(brandError.message)
+      return
+    }
+
+    if (isEditing) {
+      const { data: product, error: productError } = await updateProduct(existing.product_id, {
+        brandId: brand.id,
+        brandName: brand.name,
+        name: productName.trim(),
+        category,
+        description,
+      })
+      if (productError) {
+        setSubmitting(false)
+        setError(productError.message)
+        return
+      }
+
+      let imageUrl = existing.image_url
+      if (imageFile) {
+        const blob = await compressImage(imageFile)
+        const path = `${user.id}/${existing.product_id}-${Date.now()}.webp`
+        const { url, error: uploadError } = await uploadImage(blob, 'product-images', path)
+        if (uploadError) {
+          setSubmitting(false)
+          setError('Image upload failed. Try again.')
+          return
+        }
+        imageUrl = url
+      } else if (imagePreview == null) {
+        imageUrl = null
+      }
+
+      const { data: variant, error: variantError } = await updateProductVariant(variantId, {
+        flavor: flavor.trim() || null,
+        image_url: imageUrl,
+        image_alt: imageUrl ? imageAlt.trim() || null : null,
+        calories: calories === '' ? null : Number(calories),
+        protein_g: proteinG === '' ? null : Number(proteinG),
+        sugar_g: sugarG === '' ? null : Number(sugarG),
+        fiber_g: fiberG === '' ? null : Number(fiberG),
+        caffeine_mg: caffeineMg === '' ? null : Number(caffeineMg),
+        ingredients_text: ingredientsText.trim() || null,
+      })
+      setSubmitting(false)
+      if (variantError) {
+        setError(variantError.message)
+        return
+      }
+
+      trackEvent('product_edit', { product_id: product.id, variant_id: variant.id })
+      setDone(variant)
       return
     }
 
@@ -136,6 +210,7 @@ export default function AddProduct() {
       product_id: product.id,
       flavor: flavor.trim() || null,
       image_url: imageUrl,
+      image_alt: imageUrl ? imageAlt.trim() || null : null,
       calories: calories === '' ? null : Number(calories),
       protein_g: proteinG === '' ? null : Number(proteinG),
       sugar_g: sugarG === '' ? null : Number(sugarG),
@@ -154,11 +229,11 @@ export default function AddProduct() {
     setDone(variant)
   }
 
-  if (flagLoading) {
+  if (flagLoading || (isEditing && existingLoading)) {
     return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>
   }
 
-  if (flagData && flagData.enabled === false) {
+  if (!isEditing && flagData && flagData.enabled === false) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Add a product" onBack={() => navigate(-1)} />
@@ -169,20 +244,33 @@ export default function AddProduct() {
     )
   }
 
+  if (isEditing && (!existing || existing.created_by !== user?.id || existing.products.status !== 'pending')) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <NavBar title="Edit product" onBack={() => navigate(-1)} />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, textAlign: 'center', padding: 24, ...sans }}>
+          {existing && existing.products.status !== 'pending' ? "This product has already been reviewed, so it can't be edited here." : "You can only edit products you've submitted yourself."}
+        </div>
+      </div>
+    )
+  }
+
   if (done) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <NavBar title="Add a product" onBack={() => navigate(-1)} />
+        <NavBar title={isEditing ? 'Edit product' : 'Add a product'} onBack={() => navigate(-1)} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, textAlign: 'center' }}>
-          <div style={{ ...serif, fontSize: 17, color: '#e8e4dc' }}>Submitted for review</div>
-          <div style={{ fontSize: 13, color: '#888', ...sans, lineHeight: 1.6, maxWidth: 280 }}>
-            Thanks -- this product will show up once it's approved. You can still rate it yourself in the meantime.
-          </div>
+          <div style={{ ...serif, fontSize: 17, color: '#e8e4dc' }}>{isEditing ? 'Changes saved' : 'Submitted for review'}</div>
+          {!isEditing && (
+            <div style={{ fontSize: 13, color: '#888', ...sans, lineHeight: 1.6, maxWidth: 280 }}>
+              Thanks -- this product will show up in search once it's approved. Until then it's marked "Pending review" and only you can see it.
+            </div>
+          )}
           <button
             onClick={() => navigate(`/product/${done.id}`)}
             style={{ background: '#f0ece4', color: '#111', borderRadius: 20, padding: '12px 24px', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif }}
           >
-            View product
+            {isEditing ? 'Back to product' : 'View product'}
           </button>
         </div>
       </div>
@@ -191,7 +279,7 @@ export default function AddProduct() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <NavBar title="Add a product" onBack={() => navigate(-1)} />
+      <NavBar title={isEditing ? 'Edit product' : 'Add a product'} onBack={() => navigate(-1)} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Field label="Brand">
@@ -229,7 +317,13 @@ export default function AddProduct() {
         </Field>
 
         <Field label="Photo (optional)">
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ fontSize: 12, color: '#888', ...sans }} />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{ background: 'none', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#ccc', cursor: 'pointer', textAlign: 'left', ...sans }}
+          >
+            {imageFile ? imageFile.name : imagePreview ? 'Choose a different photo' : 'Choose photo'}
+          </button>
         </Field>
 
         {imagePreview && (
@@ -301,7 +395,7 @@ export default function AddProduct() {
             marginBottom: 20,
           }}
         >
-          {submitting ? 'Submitting...' : 'Submit for review'}
+          {submitting ? 'Please wait...' : isEditing ? 'Save changes' : 'Submit for review'}
         </button>
       </div>
     </div>

@@ -160,7 +160,11 @@ export default function ProductPage() {
         {/* Hero */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           {variant.image_url ? (
-            <img src={variant.image_url} alt={`${product.name}${variant.flavor ? ` ${variant.flavor}` : ''}`} style={{ width: 54, height: 54, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+            <img
+              src={variant.image_url}
+              alt={variant.image_alt || `${product.name}${variant.flavor ? ` ${variant.flavor}` : ''}`}
+              style={{ width: 54, height: 54, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
+            />
           ) : (
             <div
               style={{
@@ -182,6 +186,24 @@ export default function ProductPage() {
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
+            {product.status !== 'approved' && (
+              <div
+                style={{
+                  display: 'inline-block',
+                  background: '#252010',
+                  border: '0.5px solid #352f1a',
+                  color: '#e8c97a',
+                  borderRadius: 20,
+                  padding: '2px 9px',
+                  fontSize: 10,
+                  fontWeight: 500,
+                  ...sans,
+                  marginBottom: 5,
+                }}
+              >
+                Pending review
+              </div>
+            )}
             <div style={{ ...serif, fontSize: 17, color: '#f0ece4', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
               {product.name}
               {variant.flavor ? ` — ${variant.flavor}` : ''}
@@ -236,6 +258,15 @@ export default function ProductPage() {
             {variant.ai_ingredient_summary && <div style={{ fontSize: 12, color: '#5a5a5a', ...sans, lineHeight: 1.6 }}>{variant.ai_ingredient_summary}</div>}
           </div>
         </div>
+
+        {user && variant.created_by === user.id && product.status === 'pending' && (
+          <button
+            onClick={() => navigate(`/product/${variant.id}/edit`)}
+            style={{ alignSelf: 'flex-start', background: 'none', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '8px 16px', fontSize: 12, color: '#ccc', cursor: 'pointer', ...sans }}
+          >
+            Edit product
+          </button>
+        )}
 
         {user && (
           <div>

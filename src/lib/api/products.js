@@ -3,13 +3,17 @@ import { supabase } from '../supabaseClient'
 /**
  * Approved variants matching a search query and/or a set of DB category
  * values (already resolved from the UI's display label -- see
- * CATEGORY_DB_VALUES in Search.jsx). Ratings aren't embeddable here since
- * variant_rating_summary is a plain view, not a FK relationship -- fetch
- * it separately via fetchRatingSummaries and merge client-side.
+ * CATEGORY_DB_VALUES in Search.jsx), plus the current user's own
+ * not-yet-approved submissions -- no explicit status filter here at all,
+ * relying entirely on RLS ("approved or own") to decide what comes back,
+ * so a logged-out visitor only ever gets approved rows for free. Ratings
+ * aren't embeddable here since variant_rating_summary is a plain view, not
+ * a FK relationship -- fetch it separately via fetchRatingSummaries and
+ * merge client-side.
  * @param {{ query?: string, categories?: string[] | null }} params
  */
-export async function fetchApprovedVariants({ query = '', categories = null } = {}) {
-  let q = supabase.from('product_variants').select('*, products!inner(*, brands(*))').eq('status', 'approved')
+export async function fetchVariantsForCatalog({ query = '', categories = null } = {}) {
+  let q = supabase.from('product_variants').select('*, products!inner(*, brands(*))')
 
   if (categories) q = q.in('products.category', categories)
   if (query) q = q.or(`name.ilike.%${query}%,brand_name.ilike.%${query}%`, { foreignTable: 'products' })
@@ -62,6 +66,21 @@ export async function createProductVariant(fields) {
     .insert({ ...fields, data_source: 'manual' })
     .select()
     .single()
+}
+
+/** @param {string} productId @param {{ brandId: string, brandName: string, name: string, category: string, description?: string }} fields */
+export async function updateProduct(productId, { brandId, brandName, name, category, description }) {
+  return supabase
+    .from('products')
+    .update({ brand_id: brandId, brand_name: brandName, name, category, description: description || null })
+    .eq('id', productId)
+    .select()
+    .single()
+}
+
+/** @param {string} variantId @param {object} fields -- flavor, nutrition columns, ingredients_text, image_url */
+export async function updateProductVariant(variantId, fields) {
+  return supabase.from('product_variants').update(fields).eq('id', variantId).select().single()
 }
 
 /** @param {string} key */

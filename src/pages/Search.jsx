@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CATEGORIES } from '../data/placeholder'
 import { ScorePill, SectionLabel, Chip } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
-import { fetchApprovedVariants, fetchRatingSummaries } from '../lib/api/products'
+import { fetchVariantsForCatalog, fetchRatingSummaries } from '../lib/api/products'
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
@@ -77,7 +77,12 @@ function ProductRow({ variant }) {
           {product.brand_name} · {formatCategory(product.category)}
         </div>
       </div>
-      {summary?.ratings_count ? <ScorePill score={summary.overall_score} /> : <span style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>New</span>}
+      {product.status !== 'approved' && (
+        <span style={{ background: '#252010', border: '0.5px solid #352f1a', color: '#e8c97a', borderRadius: 20, padding: '2px 8px', fontSize: 9, fontWeight: 500, ...sans, flexShrink: 0 }}>
+          {product.status === 'pending' ? 'Pending' : formatCategory(product.status)}
+        </span>
+      )}
+      {product.status === 'approved' && (summary?.ratings_count ? <ScorePill score={summary.overall_score} /> : <span style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>New</span>)}
     </div>
   )
 }
@@ -106,7 +111,7 @@ export default function Search() {
     loading,
     error,
   } = useAsync(async () => {
-    const { data: rows, error } = await fetchApprovedVariants({
+    const { data: rows, error } = await fetchVariantsForCatalog({
       query: debouncedQuery,
       categories: cat === 'All' ? null : CATEGORY_DB_VALUES[cat],
     })
