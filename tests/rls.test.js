@@ -14,6 +14,7 @@ let testProductId, testVariantId
 // up alongside it.
 const extraProductIds = []
 const extraVariantIds = []
+const extraListIds = []
 
 beforeAll(async () => {
   userA = await getTestClient(0)
@@ -40,6 +41,9 @@ afterAll(async () => {
     .in('id', [testProductId, ...extraProductIds])
   if (extraVariantIds.length > 0) {
     await admin.from('product_variants').delete().in('id', extraVariantIds)
+  }
+  if (extraListIds.length > 0) {
+    await admin.from('lists').delete().in('id', extraListIds)
   }
 })
 
@@ -98,6 +102,7 @@ describe('lists / list_items privacy', () => {
       .select()
       .single()
     expect(error).toBeNull()
+    extraListIds.push(list.id)
 
     const { data: otherView } = await userB.from('lists').select().eq('id', list.id)
     expect(otherView).toHaveLength(0)
