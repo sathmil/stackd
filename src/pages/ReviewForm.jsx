@@ -5,6 +5,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById } from '../lib/api/products'
 import { fetchActiveTags, fetchOwnReview, upsertReview, syncReviewTags } from '../lib/api/reviews'
+import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
@@ -96,7 +97,10 @@ export default function ReviewForm() {
     })
     if (!error) await syncReviewTags(review.id, selectedTagIds)
     setSubmitting(false)
-    if (!error) setDone(true)
+    if (!error) {
+      trackEvent('review_submit', { variant_id: variantId, is_edit: isEditing })
+      setDone(true)
+    }
   }
 
   if (loading || user === undefined) {

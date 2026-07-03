@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
@@ -46,6 +47,7 @@ export default function Auth({ onSignedUp }) {
         setError(signUpError.message)
       } else if (data.user) {
         await supabase.from('profiles').update({ disclaimer_accepted_at: new Date().toISOString() }).eq('id', data.user.id)
+        trackEvent('signup')
         onSignedUp?.()
       }
     }
