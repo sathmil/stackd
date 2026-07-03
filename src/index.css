@@ -6,5 +6,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -
 input, textarea, button { font-family: inherit; }
 ::-webkit-scrollbar { width: 0px; background: transparent; }
 input[type=range] { -webkit-appearance: none; appearance: none; }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; }
+/*
+ * Giving the thumb pseudo-element an explicit size is required, not
+ * cosmetic -- without it, appearance:none collapses the thumb's native
+ * hit-area to ~0px, so a click can still jump the value once but there's
+ * no properly-sized element left to grab and drag afterward (browsers
+ * default a degenerate zero-size thumb to the slider's minimum). The
+ * inputs stay invisible (opacity:0) either way; the app draws its own
+ * visual thumb on top, this just keeps native dragging functional.
+ */
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; background: transparent; border: none; cursor: pointer; }
+input[type=range]::-moz-range-thumb { width: 22px; height: 22px; background: transparent; border: none; cursor: pointer; }
 textarea { resize: none; }
