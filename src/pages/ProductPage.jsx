@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Avatar, ScorePill, ScoreBars, Card, Divider, NavBar } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
+import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById, fetchRatingSummaries } from '../lib/api/products'
-import { fetchReviewsForVariant, fetchProfilesByIds, fetchTagsForReviews } from '../lib/api/reviews'
+import { fetchReviewsForVariant, fetchProfilesByIds, fetchTagsForReviews, deleteReview } from '../lib/api/reviews'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
@@ -23,8 +25,10 @@ const NUTRITION_FIELDS = [
 export default function ProductPage() {
   const { variantId } = useParams()
   const navigate = useNavigate()
+  const user = useCurrentUser()
+  const [deleting, setDeleting] = useState(false)
 
-  const { data, loading, error } = useAsync(async () => {
+  const { data, loading, error, refetch } = useAsync(async () => {
     const { data: variant, error: vErr } = await fetchVariantById(variantId)
     if (vErr) return { data: null, error: vErr }
     if (!variant) return { data: null, error: null }
@@ -74,6 +78,15 @@ export default function ProductPage() {
   const { variant, summary, reviews } = data
   const product = variant.products
   const brand = product.brands
+  const ownReview = user ? reviews.find((r) => r.user_id === user.id) : null
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete your review? This cannot be undone.')) return
+    setDeleting(true)
+    await deleteReview(ownReview.id)
+    setDeleting(false)
+    refetch()
+  }
 
   const dims = [
     { key: 'taste', label: 'Taste', value: summary?.avg_taste ?? null, color: DIM_COLOR.taste },
@@ -160,45 +173,67 @@ export default function ProductPage() {
 
         {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: '#3a3a3a', fontSize: 13, ...sans }}>No reviews yet. Be the first.</div>}
 
-        {reviews.map((review) => (
-          <Card key={review.id} style={{ gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              {review.reviewer && <Avatar user={{ avatar: review.reviewer.username.charAt(0).toUpperCase(), avatarColor: 'cyan' }} size="sm" />}
-              <span style={{ ...serif, fontSize: 13, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{review.reviewer?.username || 'Unknown'}</span>
-              <ScorePill score={(review.taste_rating + review.value_effectiveness_rating) / 2} extraStyle={{ marginLeft: 'auto' }} />
-            </div>
-            {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
-            {review.tags.length > 0 && (
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                {review.tags.map((tag) => (
-                  <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#4a4a4a', ...sans }}>
-                    {tag.label}
-                  </span>
-                ))}
+        {reviews.map((review) => {
+          const isOwn = user && review.user_id === user.id
+          return (
+            <Card key={review.id} style={{ gap: 8, border: isOwn ? '0.5px solid #2a3a3a' : undefined }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                {review.reviewer && <Avatar user={{ avatar: review.reviewer.username.charAt(0).toUpperCase(), avatarColor: 'cyan' }} size="sm" />}
+                <span style={{ ...serif, fontSize: 13, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isOwn ? 'You' : review.reviewer?.username || 'Unknown'}</span>
+                <ScorePill score={(review.taste_rating + review.value_effectiveness_rating) / 2} extraStyle={{ marginLeft: 'auto' }} />
               </div>
-            )}
-          </Card>
-        ))}
+              {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+              {review.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                  {review.tags.map((tag) => (
+                    <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#4a4a4a', ...sans }}>
+                      {tag.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {isOwn && (
+                <div style={{ display: 'flex', gap: 14 }}>
+                  <button
+                    onClick={() => navigate(`/product/${variant.id}/review`)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0 }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    style={{ background: 'none', border: 'none', cursor: deleting ? 'default' : 'pointer', fontSize: 12, color: '#ff6b6b', ...sans, padding: 0, opacity: deleting ? 0.5 : 1 }}
+                  >
+                    {deleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              )}
+            </Card>
+          )
+        })}
 
         {/* CTA */}
-        <button
-          onClick={() => navigate(`/product/${variant.id}/review`)}
-          style={{
-            background: '#f0ece4',
-            color: '#111',
-            borderRadius: 20,
-            padding: '14px 0',
-            fontSize: 15,
-            fontWeight: 500,
-            border: 'none',
-            cursor: 'pointer',
-            ...serif,
-            letterSpacing: '-0.01em',
-            marginTop: 4,
-          }}
-        >
-          Rate this product
-        </button>
+        {!ownReview && (
+          <button
+            onClick={() => navigate(`/product/${variant.id}/review`)}
+            style={{
+              background: '#f0ece4',
+              color: '#111',
+              borderRadius: 20,
+              padding: '14px 0',
+              fontSize: 15,
+              fontWeight: 500,
+              border: 'none',
+              cursor: 'pointer',
+              ...serif,
+              letterSpacing: '-0.01em',
+              marginTop: 4,
+            }}
+          >
+            Rate this product
+          </button>
+        )}
       </div>
     </div>
   )
