@@ -30,6 +30,7 @@
  * @property {number|null} sugar_g
  * @property {number|null} fiber_g
  * @property {number|null} caffeine_mg
+ * @property {number|null} sodium_mg
  * @property {string|null} ingredients_text
  * @property {number|null} ai_ingredient_quality_score
  * @property {string|null} ai_ingredient_summary
