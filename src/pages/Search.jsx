@@ -96,6 +96,7 @@ function ProductRow({ variant }) {
 }
 
 export default function Search() {
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [cat, setCat] = useState('All')
@@ -172,7 +173,9 @@ export default function Search() {
             {debouncedQuery ? (
               <>
                 <div>No products found for "{debouncedQuery}".</div>
-                <div style={{ color: '#5ecfcf' }}>Can't find it? Add a product.</div>
+                <button onClick={() => navigate('/add-product')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#5ecfcf', ...sans, padding: 0 }}>
+                  Can't find it? Add a product.
+                </button>
               </>
             ) : (
               <div>Nothing in the catalog yet.</div>
