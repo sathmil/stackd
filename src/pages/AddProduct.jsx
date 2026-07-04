@@ -61,6 +61,8 @@ export default function AddProduct() {
   const [flavor, setFlavor] = useState('')
   const [calories, setCalories] = useState('')
   const [proteinG, setProteinG] = useState('')
+  const [carbsG, setCarbsG] = useState('')
+  const [fatG, setFatG] = useState('')
   const [sugarG, setSugarG] = useState('')
   const [fiberG, setFiberG] = useState('')
   const [caffeineMg, setCaffeineMg] = useState('')
@@ -84,6 +86,8 @@ export default function AddProduct() {
     setFlavor(existing.flavor || '')
     setCalories(existing.calories ?? '')
     setProteinG(existing.protein_g ?? '')
+    setCarbsG(existing.carbs_g ?? '')
+    setFatG(existing.fat_g ?? '')
     setSugarG(existing.sugar_g ?? '')
     setFiberG(existing.fiber_g ?? '')
     setCaffeineMg(existing.caffeine_mg ?? '')
@@ -163,6 +167,8 @@ export default function AddProduct() {
         image_alt: imageUrl ? imageAlt.trim() || null : null,
         calories: calories === '' ? null : Number(calories),
         protein_g: proteinG === '' ? null : Number(proteinG),
+        carbs_g: carbsG === '' ? null : Number(carbsG),
+        fat_g: fatG === '' ? null : Number(fatG),
         sugar_g: sugarG === '' ? null : Number(sugarG),
         fiber_g: fiberG === '' ? null : Number(fiberG),
         caffeine_mg: caffeineMg === '' ? null : Number(caffeineMg),
@@ -213,6 +219,8 @@ export default function AddProduct() {
       image_alt: imageUrl ? imageAlt.trim() || null : null,
       calories: calories === '' ? null : Number(calories),
       protein_g: proteinG === '' ? null : Number(proteinG),
+      carbs_g: carbsG === '' ? null : Number(carbsG),
+      fat_g: fatG === '' ? null : Number(fatG),
       sugar_g: sugarG === '' ? null : Number(sugarG),
       fiber_g: fiberG === '' ? null : Number(fiberG),
       caffeine_mg: caffeineMg === '' ? null : Number(caffeineMg),
@@ -349,6 +357,19 @@ export default function AddProduct() {
           <div style={{ flex: 1 }}>
             <Field label="Protein g (optional)">
               <input type="number" value={proteinG} onChange={(e) => setProteinG(e.target.value)} style={inputStyle} />
+            </Field>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <Field label="Carbs g (optional)">
+              <input type="number" value={carbsG} onChange={(e) => setCarbsG(e.target.value)} style={inputStyle} />
+            </Field>
+          </div>
+          <div style={{ flex: 1 }}>
+            <Field label="Fat g (optional)">
+              <input type="number" value={fatG} onChange={(e) => setFatG(e.target.value)} style={inputStyle} />
             </Field>
           </div>
         </div>

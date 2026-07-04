@@ -25,6 +25,8 @@
  * @property {string|null} image_url
  * @property {number|null} calories
  * @property {number|null} protein_g
+ * @property {number|null} carbs_g
+ * @property {number|null} fat_g
  * @property {number|null} sugar_g
  * @property {number|null} fiber_g
  * @property {number|null} caffeine_mg

@@ -18,6 +18,8 @@ function formatCategory(raw) {
 const NUTRITION_FIELDS = [
   ['calories', 'Calories', ''],
   ['protein_g', 'Protein', 'g'],
+  ['carbs_g', 'Carbs', 'g'],
+  ['fat_g', 'Fat', 'g'],
   ['sugar_g', 'Sugar', 'g'],
   ['fiber_g', 'Fiber', 'g'],
   ['caffeine_mg', 'Caffeine', 'mg'],
