@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { fetchProfileByUsername, fetchProfileStats, fetchReviewsForUser, fetchListsForUser, updateProfile, fetchDistinctLocations } from '../lib/api/profiles'
-import { deleteReview } from '../lib/api/reviews'
+import { fetchProfileByUsername, fetchProfileStats, fetchReviewsForUser, fetchListsForUser, updateProfile } from '../lib/api/profiles'
 import { compressImage, uploadImage } from '../lib/storage'
 import { Avatar, ScorePill, Card } from '../components/ui'
 import { timeAgo } from '../utils/timeAgo'
@@ -37,9 +36,28 @@ export default function Profile() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [deletingReviewId, setDeletingReviewId] = useState(null)
+  const [worldCities, setWorldCities] = useState(null)
 
-  const { data: locations } = useAsync(() => fetchDistinctLocations(), [])
+  // ~33k entries, population >= 15,000 (GeoNames, CC-BY 4.0) -- lazy-loaded
+  // only once the edit form is actually open, as its own chunk, so it never
+  // costs anything on a page that isn't editing a profile.
+  useEffect(() => {
+    if (!editing || worldCities) return
+    import('../data/worldCities.json').then((mod) => setWorldCities(mod.default))
+  }, [editing, worldCities])
+
+  const locationSuggestions = useMemo(() => {
+    if (!worldCities || !editLocation.trim()) return []
+    const query = editLocation.trim().toLowerCase()
+    const matches = []
+    for (const city of worldCities) {
+      if (city.toLowerCase().includes(query)) {
+        matches.push(city)
+        if (matches.length >= 50) break
+      }
+    }
+    return matches
+  }, [worldCities, editLocation])
 
   const { data, loading, error, refetch } = useAsync(async () => {
     const { data: profile, error: pErr } = await fetchProfileByUsername(username)
@@ -62,15 +80,6 @@ export default function Profile() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     navigate('/auth')
-  }
-
-  const handleDeleteReview = async (e, reviewId) => {
-    e.stopPropagation()
-    if (!window.confirm('Delete your review? This cannot be undone.')) return
-    setDeletingReviewId(reviewId)
-    await deleteReview(reviewId)
-    setDeletingReviewId(null)
-    refetch()
   }
 
   const handleAvatarChange = async (e) => {
@@ -161,7 +170,7 @@ export default function Profile() {
               <input value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder="Display name (optional)" style={inputStyle} />
               <input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder="Location (optional)" list="location-options" style={inputStyle} />
               <datalist id="location-options">
-                {locations?.map((loc) => (
+                {locationSuggestions.map((loc) => (
                   <option key={loc} value={loc} />
                 ))}
               </datalist>
@@ -252,7 +261,7 @@ export default function Profile() {
                 const product = variant?.products
                 if (!product) return null
                 return (
-                  <Card key={review.id} style={{ cursor: 'pointer', gap: 8 }} onClick={() => navigate(`/product/${variant.id}`)}>
+                  <Card key={review.id} style={{ cursor: 'pointer', gap: 8 }} onClick={() => navigate(isOwn ? `/product/${variant.id}/review` : `/product/${variant.id}`)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {variant.image_url ? (
                         <img src={variant.image_url} alt={variant.image_alt || product.name} style={{ width: 30, height: 30, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
@@ -286,35 +295,6 @@ export default function Profile() {
                       <ScorePill score={review.overall_rating} />
                     </div>
                     {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
-                    {isOwn && (
-                      <div style={{ display: 'flex', gap: 14 }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigate(`/product/${variant.id}/review`)
-                          }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0 }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteReview(e, review.id)}
-                          disabled={deletingReviewId === review.id}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: deletingReviewId === review.id ? 'default' : 'pointer',
-                            fontSize: 12,
-                            color: '#ff6b6b',
-                            ...sans,
-                            padding: 0,
-                            opacity: deletingReviewId === review.id ? 0.5 : 1,
-                          }}
-                        >
-                          {deletingReviewId === review.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    )}
                   </Card>
                 )
               })

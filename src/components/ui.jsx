@@ -91,8 +91,12 @@ export function BottomNav({ active, onNavigate }) {
   )
 }
 
-export function Card({ children, style: extra = {} }) {
-  return <div style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px', display: 'flex', flexDirection: 'column', gap: 8, ...extra }}>{children}</div>
+export function Card({ children, style: extra = {}, onClick }) {
+  return (
+    <div onClick={onClick} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px', display: 'flex', flexDirection: 'column', gap: 8, ...extra }}>
+      {children}
+    </div>
+  )
 }
 
 export function Divider() {

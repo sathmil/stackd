@@ -4,7 +4,7 @@ import { Divider } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById } from '../lib/api/products'
-import { fetchActiveTags, fetchOwnReview, upsertReview, syncReviewTags } from '../lib/api/reviews'
+import { fetchActiveTags, fetchOwnReview, upsertReview, syncReviewTags, deleteReview } from '../lib/api/reviews'
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
@@ -75,6 +75,7 @@ export default function ReviewForm() {
   const [notes, setNotes] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState([])
   const [submitting, setSubmitting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [done, setDone] = useState(false)
 
   useEffect(() => {
@@ -103,6 +104,14 @@ export default function ReviewForm() {
       trackEvent('review_submit', { variant_id: variantId, is_edit: isEditing })
       setDone(true)
     }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete your review? This cannot be undone.')) return
+    setDeleting(true)
+    await deleteReview(data.ownReview.id)
+    setDeleting(false)
+    goBack()
   }
 
   if (loading || user === undefined) {
@@ -308,6 +317,25 @@ export default function ReviewForm() {
         >
           {submitting ? 'Please wait...' : isEditing ? 'Update review' : 'Post review'}
         </button>
+
+        {isEditing && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: deleting ? 'default' : 'pointer',
+              fontSize: 12,
+              color: '#ff6b6b',
+              ...sans,
+              padding: '4px 0 20px',
+              opacity: deleting ? 0.5 : 1,
+            }}
+          >
+            {deleting ? 'Deleting...' : 'Delete review'}
+          </button>
+        )}
       </div>
     </div>
   )
