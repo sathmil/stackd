@@ -87,3 +87,13 @@ export async function updateProductVariant(variantId, fields) {
 export async function fetchFeatureFlag(key) {
   return supabase.from('feature_flags').select('enabled').eq('key', key).maybeSingle()
 }
+
+/**
+ * Fire-and-forget: kicks off the Edge Function that scores ingredient
+ * quality for a variant. Never blocks the caller's UI flow on it -- a slow
+ * or failed LLM call shouldn't stop someone from submitting a product.
+ * @param {string} variantId
+ */
+export function triggerIngredientAnalysis(variantId) {
+  supabase.functions.invoke('analyze-ingredients', { body: { variantId } }).catch(() => {})
+}

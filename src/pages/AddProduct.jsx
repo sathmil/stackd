@@ -3,7 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { NavBar } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { fetchOrCreateBrand, createProduct, createProductVariant, updateProduct, updateProductVariant, fetchFeatureFlag, fetchAllBrands, fetchVariantById } from '../lib/api/products'
+import {
+  fetchOrCreateBrand,
+  createProduct,
+  createProductVariant,
+  updateProduct,
+  updateProductVariant,
+  fetchFeatureFlag,
+  fetchAllBrands,
+  fetchVariantById,
+  triggerIngredientAnalysis,
+} from '../lib/api/products'
 import { compressImage, uploadImage } from '../lib/storage'
 import { trackEvent } from '../lib/analytics'
 
@@ -184,6 +194,7 @@ export default function AddProduct() {
       }
 
       trackEvent('product_edit', { product_id: product.id, variant_id: variant.id })
+      if (variant.ingredients_text) triggerIngredientAnalysis(variant.id)
       setDone(variant)
       return
     }
@@ -238,6 +249,7 @@ export default function AddProduct() {
     }
 
     trackEvent('product_add', { product_id: product.id, variant_id: variant.id, category })
+    if (variant.ingredients_text) triggerIngredientAnalysis(variant.id)
     setDone(variant)
   }
 
