@@ -50,24 +50,32 @@ function ProductRow({ variant }) {
   const summary = variant.summary
   return (
     <div onClick={() => navigate(`/product/${variant.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '0.5px solid #1a1a1a', cursor: 'pointer' }}>
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: '#1a1a1a',
-          border: '0.5px solid #222',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 14,
-          color: '#4a4a4a',
-          flexShrink: 0,
-          ...serif,
-        }}
-      >
-        {product.name.charAt(0)}
-      </div>
+      {variant.image_url ? (
+        <img
+          src={variant.image_url}
+          alt={variant.image_alt || `${product.name}${variant.flavor ? ` ${variant.flavor}` : ''}`}
+          style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+        />
+      ) : (
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            background: '#1a1a1a',
+            border: '0.5px solid #222',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            color: '#4a4a4a',
+            flexShrink: 0,
+            ...serif,
+          }}
+        >
+          {product.name.charAt(0)}
+        </div>
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
           {product.name}
