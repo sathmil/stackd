@@ -279,7 +279,7 @@ export default function AddProduct() {
             </div>
           )}
           <button
-            onClick={() => navigate(`/product/${done.id}`)}
+            onClick={() => navigate(`/product/${done.id}`, { replace: true })}
             style={{ background: '#f0ece4', color: '#111', borderRadius: 20, padding: '12px 24px', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif }}
           >
             {isEditing ? 'Back to product' : 'View product'}

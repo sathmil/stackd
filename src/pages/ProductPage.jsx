@@ -284,7 +284,7 @@ export default function ProductPage() {
 
         {user && variant.created_by === user.id && product.status === 'pending' && (
           <button
-            onClick={() => navigate(`/product/${variant.id}/edit`)}
+            onClick={() => navigate(`/product/${variant.id}/edit`, { replace: true })}
             style={{ alignSelf: 'flex-start', background: 'none', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '8px 16px', fontSize: 12, color: '#ccc', cursor: 'pointer', ...sans }}
           >
             Edit product
