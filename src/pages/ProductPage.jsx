@@ -7,6 +7,7 @@ import { fetchVariantById, fetchRatingSummaries } from '../lib/api/products'
 import { fetchReviewsForVariant, fetchProfilesByIds, fetchTagsForReviews, deleteReview, reportReview } from '../lib/api/reviews'
 import { fetchOwnLists, fetchListMembership, createList, addListItem, removeListItem } from '../lib/api/lists'
 import { trackEvent } from '../lib/analytics'
+import { scoreStyle } from '../utils/scoreStyle'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
@@ -32,6 +33,7 @@ export default function ProductPage() {
   const user = useCurrentUser()
   const [deleting, setDeleting] = useState(false)
   const [showListPicker, setShowListPicker] = useState(false)
+  const [showScoreInfo, setShowScoreInfo] = useState(false)
   const [ownLists, setOwnLists] = useState(null)
   const [membership, setMembership] = useState({}) // listId -> list_item id, for lists that already contain this variant
   const [newListName, setNewListName] = useState('')
@@ -270,17 +272,104 @@ export default function ProductPage() {
           )}
 
           <div style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => setShowScoreInfo(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer', alignSelf: 'flex-start' }}
+            >
               <span style={{ fontSize: 11, color: '#5a5a5a', ...sans }}>Ingredient quality (AI)</span>
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  border: '0.5px solid #3a3a3a',
+                  color: '#5a5a5a',
+                  fontSize: 9,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  ...sans,
+                }}
+              >
+                i
+              </span>
               {variant.ai_ingredient_quality_score != null ? (
                 <ScorePill score={variant.ai_ingredient_quality_score} />
               ) : (
                 <span style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>Not yet analyzed</span>
               )}
-            </div>
+            </button>
             {variant.ai_ingredient_summary && <div style={{ fontSize: 12, color: '#5a5a5a', ...sans, lineHeight: 1.6 }}>{variant.ai_ingredient_summary}</div>}
           </div>
         </div>
+
+        {showScoreInfo && (
+          <div
+            onClick={() => setShowScoreInfo(false)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#161616',
+                border: '0.5px solid #262626',
+                borderRadius: '16px 16px 0 0',
+                padding: 20,
+                width: '100%',
+                maxWidth: 430,
+                maxHeight: '80vh',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>Ingredient quality score</span>
+                <button onClick={() => setShowScoreInfo(false)} style={{ background: 'none', border: 'none', color: '#5a5a5a', fontSize: 18, cursor: 'pointer', padding: 0 }}>
+                  ✕
+                </button>
+              </div>
+              <div style={{ fontSize: 13, color: '#999', ...sans, lineHeight: 1.6 }}>
+                An AI model reads this variant's ingredient list and rates it 1.0 (poor) to 10.0 (excellent) based on things like added sugars, artificial sweeteners/colors/flavors, proprietary blends
+                that hide dosages, and genuinely beneficial ingredients. It's a read on the ingredients only -- not your personal taste or value rating, and not medical or nutritional advice.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  [9.0, 10.0, 'Excellent -- clean ingredient list, minimal or no red flags'],
+                  [7.0, 8.9, 'Good -- solid ingredients with a few minor additives'],
+                  [5.0, 6.9, 'Mixed -- some real positives alongside notable additives'],
+                  [1.0, 4.9, 'Poor -- heavy on artificial additives or hidden dosages'],
+                ].map(([lo, hi, desc]) => {
+                  const s = scoreStyle(hi)
+                  return (
+                    <div key={lo} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span
+                        style={{
+                          background: s.bg,
+                          color: s.color,
+                          border: `0.5px solid ${s.border}`,
+                          borderRadius: 20,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          padding: '3px 10px',
+                          ...serif,
+                          letterSpacing: '-0.01em',
+                          minWidth: 76,
+                          textAlign: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {lo.toFixed(1)}–{hi.toFixed(1)}
+                      </span>
+                      <span style={{ fontSize: 12, color: '#888', ...sans }}>{desc}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {user && variant.created_by === user.id && product.status === 'pending' && (
           <button
