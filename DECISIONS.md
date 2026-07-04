@@ -21,6 +21,12 @@ A short log of what was deliberately deferred or ruled out, and why, so it doesn
 - **No automated fake-review/spam detection.** A user-facing "Report" button + manual review in Studio is the only mechanism. Simple per-user daily insert caps (reviews/products/reports) guard against a single bad actor, not general abuse.
 - **Duplicate products are prevented structurally** (a normalized unique index on brand+name), and near-duplicates are merged by hand with documented SQL steps (see `TRUST_AND_SAFETY.md`), not an automated merge tool.
 
+## Production infrastructure (Phase 9)
+
+- **Production email provider: Resend**, chosen but not yet configured. Blocked on owning a domain to send from -- Supabase's default auth-email sender works for dev (rate-limited, fine at low volume) but isn't meant for real signup traffic, and sending from a generic/shared address isn't a good look for real users either. Revisit once a domain exists; configure Resend + your domain in Supabase Auth settings, then also flip on "Confirm email" for the production project (deliberately off in dev since the rate-limited default sender made iteration painful -- this is the point where it stops being a cost and starts being free).
+- **Separate production Supabase project deferred.** Not worth the split (and possible plan/cost implications) until closer to actually inviting the 20-50 people from the MVP success criteria. `supabase/migrations/` is already initialized with the current schema as a baseline (Phase 9), so creating the prod project and applying migrations to it later is a mechanical step, not a redesign.
+- **Carried forward, still blocked:** the Phase 1 forgot-password flow's full click-through (request email -> click link -> land on reset form -> set new password) was never confirmed end-to-end -- the one attempt landed on the login screen instead, likely Stanford Gmail's link-prescanning consuming the one-time token before the real click. Retesting this needs a real (non-rate-limited) email provider live, so it's blocked on the same domain/Resend setup above.
+
 ## Technical scope
 
 - **No barcode/camera scanning yet.** `Scan.jsx` stays a stub with a manual "Add a product" fallback. Barcode is core to this category eventually, but building real camera + external-API integration before the core rating loop even works would be backwards.
