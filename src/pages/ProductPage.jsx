@@ -23,6 +23,7 @@ const NUTRITION_FIELDS = [
   ['sugar_g', 'Sugar', 'g'],
   ['fiber_g', 'Fiber', 'g'],
   ['caffeine_mg', 'Caffeine', 'mg'],
+  ['sodium_mg', 'Sodium', 'mg'],
 ]
 
 export default function ProductPage() {

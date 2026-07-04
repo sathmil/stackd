@@ -66,6 +66,7 @@ export default function AddProduct() {
   const [sugarG, setSugarG] = useState('')
   const [fiberG, setFiberG] = useState('')
   const [caffeineMg, setCaffeineMg] = useState('')
+  const [sodiumMg, setSodiumMg] = useState('')
   const [ingredientsText, setIngredientsText] = useState('')
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -91,6 +92,7 @@ export default function AddProduct() {
     setSugarG(existing.sugar_g ?? '')
     setFiberG(existing.fiber_g ?? '')
     setCaffeineMg(existing.caffeine_mg ?? '')
+    setSodiumMg(existing.sodium_mg ?? '')
     setIngredientsText(existing.ingredients_text || '')
     if (existing.image_url) {
       setImagePreview(existing.image_url)
@@ -172,6 +174,7 @@ export default function AddProduct() {
         sugar_g: sugarG === '' ? null : Number(sugarG),
         fiber_g: fiberG === '' ? null : Number(fiberG),
         caffeine_mg: caffeineMg === '' ? null : Number(caffeineMg),
+        sodium_mg: sodiumMg === '' ? null : Number(sodiumMg),
         ingredients_text: ingredientsText.trim() || null,
       })
       setSubmitting(false)
@@ -224,6 +227,7 @@ export default function AddProduct() {
       sugar_g: sugarG === '' ? null : Number(sugarG),
       fiber_g: fiberG === '' ? null : Number(fiberG),
       caffeine_mg: caffeineMg === '' ? null : Number(caffeineMg),
+      sodium_mg: sodiumMg === '' ? null : Number(sodiumMg),
       ingredients_text: ingredientsText.trim() || null,
       created_by: user.id,
     })
@@ -387,9 +391,18 @@ export default function AddProduct() {
           </div>
         </div>
 
-        <Field label="Caffeine mg (optional)">
-          <input type="number" value={caffeineMg} onChange={(e) => setCaffeineMg(e.target.value)} style={inputStyle} />
-        </Field>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <Field label="Caffeine mg (optional)">
+              <input type="number" value={caffeineMg} onChange={(e) => setCaffeineMg(e.target.value)} style={inputStyle} />
+            </Field>
+          </div>
+          <div style={{ flex: 1 }}>
+            <Field label="Sodium mg (optional)">
+              <input type="number" value={sodiumMg} onChange={(e) => setSodiumMg(e.target.value)} style={inputStyle} />
+            </Field>
+          </div>
+        </div>
 
         <Field label="Ingredients (optional)">
           <textarea value={ingredientsText} onChange={(e) => setIngredientsText(e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
