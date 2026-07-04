@@ -61,6 +61,18 @@ delete from product_variants where id = 'loser_id';
 
 Run both in the Supabase SQL editor. Back up (or at least `select` and eyeball) the rows being merged first -- these are hand-run, not app-triggered, so there's no undo.
 
+## Products stuck without ingredients (AI analysis)
+
+Ingredients aren't a required field on `AddProduct.jsx` -- typing out a full ingredient list on a phone is real friction, and it's better to get the submission at all. But without `ingredients_text`, Phase 8's ingredient-quality analysis never runs and the variant sits at `ai_analysis_status = 'pending'` indefinitely with no visible signal that it's stuck.
+
+Check for these as part of reviewing pending submissions, in Studio's SQL editor:
+
+```sql
+select * from pending_products_missing_ingredients;
+```
+
+For each one, either ask the submitter to add ingredients via their own edit flow (`/product/:variantId/edit`, available to them while the product is still `pending`), or fill in `product_variants.ingredients_text` yourself directly in Studio. Either way, re-run `node scripts/run-ingredient-analysis.js` afterward to pick up anything now unblocked -- it batches every `pending`/`failed` variant automatically.
+
 ## Suspicious accounts
 
 No automated detection. An eyeball check in Studio (`auth.users`, `profiles`, and their review/product history) if something looks off -- e.g. one account posting many reviews in a short window despite the rate limit not being hit yet.

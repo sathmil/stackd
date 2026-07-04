@@ -740,3 +740,28 @@ grant execute on all functions in schema public to anon, authenticated, service_
 -- grants without this section needing to be remembered/updated by hand.
 alter default privileges in schema public grant select, insert, update, delete on tables to authenticated, service_role;
 alter default privileges in schema public grant select on tables to anon;
+
+-- ============================================================
+-- moderation views (Phase 8 follow-up)
+-- ============================================================
+-- Pending products the AI ingredient analysis can't do anything with yet
+-- because ingredients_text is missing -- otherwise these sit at
+-- ai_analysis_status = 'pending' indefinitely with no visible signal that
+-- they're stuck. Checked by hand in Studio as part of reviewing pending
+-- submissions (see TRUST_AND_SAFETY.md), not surfaced in the app.
+--
+-- security_invoker matters here even though only Studio/service_role ever
+-- queries this in practice: the default-privileges grants above apply to
+-- every future view automatically, so without it this view would run with
+-- its owner's privileges and leak every user's pending submissions to
+-- anon/authenticated if ever queried through the client API. With it, the
+-- underlying products/product_variants RLS applies to whoever queries it --
+-- service_role bypasses RLS as usual (the moderator view), a regular user
+-- would only ever see their own.
+create view pending_products_missing_ingredients with (security_invoker = true) as
+select p.id as product_id, p.name as product_name, p.brand_name, p.category, p.created_by, p.created_at, v.id as variant_id, v.flavor
+from products p
+join product_variants v on v.product_id = p.id
+where p.status = 'pending'
+  and (v.ingredients_text is null or trim(v.ingredients_text) = '')
+order by p.created_at asc;
