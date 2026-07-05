@@ -143,7 +143,15 @@ export default function App() {
     return (
       <ResetPassword
         onDone={() => {
-          window.history.replaceState(null, '', window.location.pathname)
+          // Land on a real destination, not the same pathname -- if the
+          // recovery link's path was itself /reset-password (as it is with
+          // the token_hash-based email template), leaving the path
+          // unchanged means the router's own /reset-password route
+          // immediately re-matches once recoveryMode flips off, mounting a
+          // second fresh ResetPassword instance with no token_hash left in
+          // the URL and looping back to the same form. verifyOtp + updateUser
+          // leaves a real, valid session behind, so /feed is a safe landing.
+          window.history.replaceState(null, '', '/feed')
           setRecoveryMode(false)
         }}
       />
