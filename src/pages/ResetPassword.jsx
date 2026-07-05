@@ -45,9 +45,19 @@ export default function ResetPassword({ onDone }) {
 
     setSubmitting(true)
     const { error: updateError } = await supabase.auth.updateUser({ password })
+    if (updateError) {
+      setSubmitting(false)
+      setError(updateError.message)
+      return
+    }
+
+    // Forgot-password is often specifically "someone else has my password" --
+    // sign out every other active session so a reset actually locks them out,
+    // not just this device. Best-effort: the password change already
+    // succeeded, so a failure here shouldn't block showing that success.
+    await supabase.auth.signOut({ scope: 'others' }).catch(() => {})
     setSubmitting(false)
-    if (updateError) setError(updateError.message)
-    else setDone(true)
+    setDone(true)
   }
 
   const inputStyle = {
