@@ -153,14 +153,24 @@ max_indexes = 5
 # [storage.vector.buckets.documents-openai]
 
 [auth]
+# NOTE: this section documents the values the LIVE project's Auth settings
+# should have -- it is a reference for manually entering them in Supabase
+# Studio (Authentication -> URL Configuration), not something to `supabase
+# config push`. The live project was configured directly in Studio over
+# several phases and this file doesn't reflect the rest of that state (SMTP,
+# etc), so a wholesale push risks silently reverting settings not declared
+# here. Update this comment/section as the source of truth changes; apply
+# changes by hand in Studio.
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "https://www.getstackd.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Keeping the old Vercel URL during the domain transition; drop it once
+# nothing is still linking to it.
+additional_redirect_urls = ["https://www.getstackd.app", "https://getstackd.app", "https://stackd-lemon.vercel.app"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -247,6 +257,21 @@ otp_expiry = 3600
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
+
+# Reference for the live project's Reset Password template (Authentication ->
+# Email Templates -> Reset Password in Studio) -- paste supabase/templates/
+# recovery.html's body in there by hand. The default template's
+# {{ .ConfirmationURL }} link points at Supabase's own hosted verify
+# endpoint, which is a plain server-side GET that consumes the one-time
+# token immediately -- exactly what an email security gateway that
+# pre-scans links (e.g. Stanford's Proofpoint URL Defense) triggers,
+# silently burning the token before the real click. This template instead
+# links to token_hash on this app's own /reset-password route, which
+# ResetPassword.jsx explicitly exchanges via verifyOtp() -- see that file's
+# comment for the full reasoning.
+[auth.email.template.recovery]
+subject = "Reset your Stackd password"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
