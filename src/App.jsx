@@ -13,6 +13,7 @@ import ReviewForm from './pages/ReviewForm'
 import Profile from './pages/Profile'
 import Lists from './pages/Lists'
 import ListDetail from './pages/ListDetail'
+import RatedProducts from './pages/RatedProducts'
 import AddProduct from './pages/AddProduct'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
@@ -107,6 +108,7 @@ function AppShell({ session, setJustSignedUp }) {
               }
             />
             <Route path="/lists/:listId" element={<ListDetail />} />
+            <Route path="/rated/:username" element={<RatedProducts />} />
             <Route path="/profile/:username" element={<Profile />} />
             <Route
               path="/add-product"
