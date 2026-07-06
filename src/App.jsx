@@ -17,6 +17,7 @@ import AddProduct from './pages/AddProduct'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import { BottomNav, LoadingScreen } from './components/ui'
+import { ToastProvider } from './components/Toast'
 
 function AuthRoute({ session, onSignedUp }) {
   const [searchParams] = useSearchParams()
@@ -49,75 +50,77 @@ function AppShell({ session, setJustSignedUp }) {
 
   return (
     <div style={{ position: 'relative', maxWidth: 430, margin: '0 auto', height: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <Routes>
-          <Route path="/auth" element={<AuthRoute session={session} onSignedUp={() => setJustSignedUp(true)} />} />
-          <Route path="/reset-password" element={<ResetPassword onDone={() => navigate('/feed')} />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route
-            path="/feed"
-            element={
-              <RequireAuth session={session}>
-                <Feed />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/search"
-            element={
-              <RequireAuth session={session}>
-                <Search />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/scan"
-            element={
-              <RequireAuth session={session}>
-                <Scan />
-              </RequireAuth>
-            }
-          />
-          <Route path="/product/:variantId" element={<ProductPage />} />
-          <Route
-            path="/product/:variantId/review"
-            element={
-              <RequireAuth session={session}>
-                <ReviewForm />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/product/:variantId/edit"
-            element={
-              <RequireAuth session={session}>
-                <AddProduct />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/lists"
-            element={
-              <RequireAuth session={session}>
-                <Lists />
-              </RequireAuth>
-            }
-          />
-          <Route path="/lists/:listId" element={<ListDetail />} />
-          <Route path="/profile/:username" element={<Profile />} />
-          <Route
-            path="/add-product"
-            element={
-              <RequireAuth session={session}>
-                <AddProduct />
-              </RequireAuth>
-            }
-          />
-          <Route path="*" element={<Navigate to={session ? '/feed' : '/auth'} replace />} />
-        </Routes>
-      </div>
-      {activeTab && <BottomNav active={activeTab} onNavigate={goToTab} />}
+      <ToastProvider>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Routes>
+            <Route path="/auth" element={<AuthRoute session={session} onSignedUp={() => setJustSignedUp(true)} />} />
+            <Route path="/reset-password" element={<ResetPassword onDone={() => navigate('/feed')} />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route
+              path="/feed"
+              element={
+                <RequireAuth session={session}>
+                  <Feed />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/search"
+              element={
+                <RequireAuth session={session}>
+                  <Search />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/scan"
+              element={
+                <RequireAuth session={session}>
+                  <Scan />
+                </RequireAuth>
+              }
+            />
+            <Route path="/product/:variantId" element={<ProductPage />} />
+            <Route
+              path="/product/:variantId/review"
+              element={
+                <RequireAuth session={session}>
+                  <ReviewForm />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/product/:variantId/edit"
+              element={
+                <RequireAuth session={session}>
+                  <AddProduct />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/lists"
+              element={
+                <RequireAuth session={session}>
+                  <Lists />
+                </RequireAuth>
+              }
+            />
+            <Route path="/lists/:listId" element={<ListDetail />} />
+            <Route path="/profile/:username" element={<Profile />} />
+            <Route
+              path="/add-product"
+              element={
+                <RequireAuth session={session}>
+                  <AddProduct />
+                </RequireAuth>
+              }
+            />
+            <Route path="*" element={<Navigate to={session ? '/feed' : '/auth'} replace />} />
+          </Routes>
+        </div>
+        {activeTab && <BottomNav active={activeTab} onNavigate={goToTab} />}
+      </ToastProvider>
     </div>
   )
 }

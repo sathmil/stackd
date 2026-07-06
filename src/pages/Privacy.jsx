@@ -19,7 +19,7 @@ export default function Privacy() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <NavBar title="Privacy Policy" onBack={() => navigate(-1)} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <div style={{ fontSize: 11, color: '#555', ...sans }}>Last updated: July 2026</div>
+        <div style={{ fontSize: 11, color: '#8f8f8f', ...sans }}>Last updated: July 2026</div>
 
         <Section title="What we collect">
           Your email and password (handled by our auth provider, Supabase -- we never see your password in plain text), profile info you choose to add (username, display name, avatar, location, goal),

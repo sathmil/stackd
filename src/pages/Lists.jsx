@@ -4,6 +4,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchOwnLists, createList } from '../lib/api/lists'
 import { trackEvent } from '../lib/analytics'
+import { Skeleton, ErrorState } from '../components/ui'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
@@ -83,12 +84,12 @@ export default function Lists() {
           </div>
         )}
 
-        {loading && <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>}
+        {loading && <Skeleton variant="rows" count={3} />}
 
-        {error && <div style={{ textAlign: 'center', padding: '48px 0', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load your lists. Try again in a moment.</div>}
+        {error && <ErrorState message="Couldn't load your lists. Try again in a moment." onRetry={refetch} />}
 
         {!loading && !error && lists?.length === 0 && !creating && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>You haven't made any lists yet.</div>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans }}>You haven't made any lists yet.</div>
         )}
 
         {!loading &&
@@ -101,11 +102,11 @@ export default function Lists() {
             >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
-                <div style={{ fontSize: 11, color: '#3a3a3a', ...sans, marginTop: 3 }}>
+                <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>
                   {list.list_items?.[0]?.count || 0} product{(list.list_items?.[0]?.count || 0) !== 1 ? 's' : ''} · {list.is_public ? 'Public' : 'Private'}
                 </div>
               </div>
-              <span style={{ color: '#2e2e2e', fontSize: 18 }}>›</span>
+              <span style={{ color: '#828282', fontSize: 18 }}>›</span>
             </div>
           ))}
       </div>

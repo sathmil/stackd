@@ -102,7 +102,7 @@ export default function ResetPassword({ onDone }) {
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, color: '#555', ...sans }}>New password</label>
+              <label style={{ fontSize: 11, color: '#8f8f8f', ...sans }}>New password</label>
               <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
             </div>
             {error && <div style={{ fontSize: 12, color: '#ff6b6b', ...sans }}>{error}</div>}

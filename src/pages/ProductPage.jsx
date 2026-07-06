@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Avatar, ScorePill, Card, Divider, NavBar } from '../components/ui'
+import { Avatar, ScorePill, Card, Divider, NavBar, Skeleton, ErrorState } from '../components/ui'
+import { useToast } from '../components/Toast'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById, fetchRatingSummaries } from '../lib/api/products'
@@ -31,6 +32,7 @@ export default function ProductPage() {
   const { variantId } = useParams()
   const navigate = useNavigate()
   const user = useCurrentUser()
+  const showToast = useToast()
   const [deleting, setDeleting] = useState(false)
   const [showListPicker, setShowListPicker] = useState(false)
   const [showScoreInfo, setShowScoreInfo] = useState(false)
@@ -58,22 +60,40 @@ export default function ProductPage() {
   }
 
   const handleToggleList = async (listId, targetVariantId) => {
+    const listName = ownLists?.find((l) => l.id === listId)?.name || 'list'
     const itemId = membership[listId]
     if (itemId) {
+      // Optimistic: drop it from membership immediately, restore on failure.
+      setMembership((m) => {
+        const next = { ...m }
+        delete next[listId]
+        return next
+      })
       const { error } = await removeListItem(itemId)
       if (!error) {
+        trackEvent('list_item_remove', { list_id: listId, variant_id: targetVariantId })
+        showToast(`Removed from ${listName}.`)
+      } else {
+        setMembership((m) => ({ ...m, [listId]: itemId }))
+        showToast(`Couldn't remove from ${listName}. Try again.`, 'error')
+      }
+    } else {
+      // Optimistic: mark added immediately with a placeholder id, replace
+      // with the real item id (or roll back entirely) once the call resolves.
+      const placeholderId = `pending-${Date.now()}`
+      setMembership((m) => ({ ...m, [listId]: placeholderId }))
+      const { data: item, error } = await addListItem(listId, targetVariantId)
+      if (!error) {
+        setMembership((m) => ({ ...m, [listId]: item.id }))
+        trackEvent('list_item_add', { list_id: listId, variant_id: targetVariantId })
+        showToast(`Added to ${listName}.`)
+      } else {
         setMembership((m) => {
           const next = { ...m }
           delete next[listId]
           return next
         })
-        trackEvent('list_item_remove', { list_id: listId, variant_id: targetVariantId })
-      }
-    } else {
-      const { data: item, error } = await addListItem(listId, targetVariantId)
-      if (!error) {
-        setMembership((m) => ({ ...m, [listId]: item.id }))
-        trackEvent('list_item_add', { list_id: listId, variant_id: targetVariantId })
+        showToast(`Couldn't add to ${listName}. Try again.`, 'error')
       }
     }
   }
@@ -128,12 +148,20 @@ export default function ProductPage() {
   }, [data?.variant])
 
   if (loading) {
-    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <NavBar title="Product" onBack={() => navigate(-1)} />
+        <Skeleton variant="detail" />
+      </div>
+    )
   }
 
   if (error) {
     return (
-      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load this product. Try again in a moment.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <NavBar title="Product" onBack={() => navigate(-1)} />
+        <ErrorState message="Couldn't load this product. Try again in a moment." onRetry={refetch} />
+      </div>
     )
   }
 
@@ -141,7 +169,7 @@ export default function ProductPage() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Product" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>Product not found.</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, ...sans }}>Product not found.</div>
       </div>
     )
   }
@@ -202,7 +230,7 @@ export default function ProductPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 22,
-                color: '#4a4a4a',
+                color: '#868686',
                 flexShrink: 0,
                 ...serif,
               }}
@@ -233,7 +261,7 @@ export default function ProductPage() {
               {product.name}
               {variant.flavor ? ` — ${variant.flavor}` : ''}
             </div>
-            <div style={{ fontSize: 12, color: '#4a4a4a', ...sans, marginTop: 3 }}>
+            <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 3 }}>
               {brand?.name || product.brand_name} · {formatCategory(product.category)}
             </div>
           </div>
@@ -241,21 +269,21 @@ export default function ProductPage() {
             {summary?.ratings_count ? (
               <>
                 <div style={{ ...serif, fontSize: 36, color: '#5ecfcf', letterSpacing: '-0.03em', lineHeight: 1 }}>{summary.overall_score.toFixed(1)}</div>
-                <div style={{ fontSize: 10, color: '#3a3a3a', ...sans, marginTop: 3 }}>{summary.ratings_count.toLocaleString()} ratings</div>
+                <div style={{ fontSize: 10, color: '#828282', ...sans, marginTop: 3 }}>{summary.ratings_count.toLocaleString()} ratings</div>
               </>
             ) : (
-              <div style={{ fontSize: 12, color: '#3a3a3a', ...sans }}>New</div>
+              <div style={{ fontSize: 12, color: '#828282', ...sans }}>New</div>
             )}
           </div>
         </div>
 
-        {summary?.ratings_count > 0 && summary.buy_again_pct != null && <div style={{ fontSize: 12, color: '#5a5a5a', ...sans }}>{summary.buy_again_pct}% would buy again</div>}
+        {summary?.ratings_count > 0 && summary.buy_again_pct != null && <div style={{ fontSize: 12, color: '#969696', ...sans }}>{summary.buy_again_pct}% would buy again</div>}
 
         {/* Objective info -- nutrition facts and AI ingredient analysis are
             facts about the product, not anyone's subjective rating, so they
             live here rather than blended into the score above. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>Nutrition & ingredients</span>
+          <span style={{ fontSize: 9, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>Nutrition & ingredients</span>
 
           {nutrition.length > 0 && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -265,7 +293,7 @@ export default function ProductPage() {
                     {variant[key]}
                     {unit}
                   </div>
-                  <div style={{ fontSize: 10, color: '#4a4a4a', ...sans, marginTop: 2 }}>{label}</div>
+                  <div style={{ fontSize: 10, color: '#868686', ...sans, marginTop: 2 }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -276,14 +304,14 @@ export default function ProductPage() {
               onClick={() => setShowScoreInfo(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer', alignSelf: 'flex-start' }}
             >
-              <span style={{ fontSize: 11, color: '#5a5a5a', ...sans }}>Ingredient quality (AI)</span>
+              <span style={{ fontSize: 11, color: '#969696', ...sans }}>Ingredient quality (AI)</span>
               <span
                 style={{
                   width: 14,
                   height: 14,
                   borderRadius: '50%',
                   border: '0.5px solid #3a3a3a',
-                  color: '#5a5a5a',
+                  color: '#969696',
                   fontSize: 9,
                   display: 'flex',
                   alignItems: 'center',
@@ -296,12 +324,12 @@ export default function ProductPage() {
               {variant.ai_ingredient_quality_score != null ? (
                 <ScorePill score={variant.ai_ingredient_quality_score} />
               ) : (
-                <span style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>Not yet analyzed</span>
+                <span style={{ fontSize: 10, color: '#828282', ...sans }}>Not yet analyzed</span>
               )}
             </button>
-            {variant.ai_ingredient_summary && <div style={{ fontSize: 12, color: '#5a5a5a', ...sans, lineHeight: 1.6 }}>{variant.ai_ingredient_summary}</div>}
+            {variant.ai_ingredient_summary && <div style={{ fontSize: 12, color: '#969696', ...sans, lineHeight: 1.6 }}>{variant.ai_ingredient_summary}</div>}
             {variant.ai_ingredient_quality_score != null && (
-              <div style={{ fontSize: 10, color: '#3a3a3a', ...sans, fontStyle: 'italic' }}>AI-generated estimate, not medical or nutritional advice.</div>
+              <div style={{ fontSize: 10, color: '#828282', ...sans, fontStyle: 'italic' }}>AI-generated estimate, not medical or nutritional advice.</div>
             )}
           </div>
         </div>
@@ -329,7 +357,7 @@ export default function ProductPage() {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>Ingredient quality score</span>
-                <button onClick={() => setShowScoreInfo(false)} style={{ background: 'none', border: 'none', color: '#5a5a5a', fontSize: 18, cursor: 'pointer', padding: 0 }}>
+                <button onClick={() => setShowScoreInfo(false)} style={{ background: 'none', border: 'none', color: '#969696', fontSize: 18, cursor: 'pointer', padding: 0 }}>
                   ✕
                 </button>
               </div>
@@ -394,8 +422,8 @@ export default function ProductPage() {
 
             {showListPicker && (
               <div style={{ marginTop: 10, background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {ownLists === null && <div style={{ fontSize: 12, color: '#3a3a3a', ...sans }}>Loading your lists...</div>}
-                {ownLists?.length === 0 && <div style={{ fontSize: 12, color: '#3a3a3a', ...sans }}>You don't have any lists yet -- make one below.</div>}
+                {ownLists === null && <div style={{ fontSize: 12, color: '#828282', ...sans }}>Loading your lists...</div>}
+                {ownLists?.length === 0 && <div style={{ fontSize: 12, color: '#828282', ...sans }}>You don't have any lists yet -- make one below.</div>}
                 {ownLists?.map((list) => {
                   const isAdded = !!membership[list.id]
                   return (
@@ -466,25 +494,32 @@ export default function ProductPage() {
           <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>Reviews ({reviews.length})</span>
         </div>
 
-        {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: '#3a3a3a', fontSize: 13, ...sans }}>No reviews yet. Be the first.</div>}
+        {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: '#828282', fontSize: 13, ...sans }}>No reviews yet. Be the first.</div>}
 
         {reviews.map((review) => {
           const isOwn = user && review.user_id === user.id
           return (
             <Card key={review.id} style={{ gap: 8, border: isOwn ? '0.5px solid #2a3a3a' : undefined }}>
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: review.reviewer ? 'pointer' : 'default' }}
-                onClick={() => review.reviewer && navigate(`/profile/${review.reviewer.username}`)}
-              >
-                {review.reviewer && <Avatar user={review.reviewer} size="sm" />}
-                <span style={{ ...serif, fontSize: 13, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isOwn ? 'You' : review.reviewer?.username || 'Unknown'}</span>
-                <ScorePill score={review.overall_rating} extraStyle={{ marginLeft: 'auto' }} />
-              </div>
-              {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+              {review.reviewer ? (
+                <button
+                  onClick={() => navigate(`/profile/${review.reviewer.username}`)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
+                >
+                  <Avatar user={review.reviewer} size="sm" />
+                  <span style={{ ...serif, fontSize: 13, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isOwn ? 'You' : review.reviewer.username}</span>
+                  <ScorePill score={review.overall_rating} extraStyle={{ marginLeft: 'auto' }} />
+                </button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span style={{ ...serif, fontSize: 13, color: '#e8e4dc', letterSpacing: '-0.01em' }}>Unknown</span>
+                  <ScorePill score={review.overall_rating} extraStyle={{ marginLeft: 'auto' }} />
+                </div>
+              )}
+              {review.notes && <div style={{ fontSize: 13, color: '#969696', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
               {review.tags.length > 0 && (
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   {review.tags.map((tag) => (
-                    <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#4a4a4a', ...sans }}>
+                    <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#868686', ...sans }}>
                       {tag.label}
                     </span>
                   ))}
@@ -511,9 +546,9 @@ export default function ProductPage() {
               {!isOwn && user && (
                 <div>
                   {reportedIds.has(review.id) ? (
-                    <span style={{ fontSize: 11, color: '#3a3a3a', ...sans }}>Reported</span>
+                    <span style={{ fontSize: 11, color: '#828282', ...sans }}>Reported</span>
                   ) : (
-                    <button onClick={() => toggleReport(review.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#3a3a3a', ...sans, padding: 0 }}>
+                    <button onClick={() => toggleReport(review.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#828282', ...sans, padding: 0 }}>
                       {reportingId === review.id ? 'Cancel' : 'Report'}
                     </button>
                   )}

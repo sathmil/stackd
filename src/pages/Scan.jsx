@@ -9,7 +9,7 @@ export default function Scan() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 28 }}>
       <div style={{ fontSize: 60, lineHeight: 1 }}>▣</div>
       <div style={{ ...serif, fontSize: 22, color: '#e8e4dc', letterSpacing: '-0.01em', textAlign: 'center' }}>Scan a barcode</div>
-      <div style={{ fontSize: 14, color: '#4a4a4a', ...sans, textAlign: 'center', lineHeight: 1.7, maxWidth: 250 }}>
+      <div style={{ fontSize: 14, color: '#868686', ...sans, textAlign: 'center', lineHeight: 1.7, maxWidth: 250 }}>
         Point your camera at any health product barcode to instantly pull up its Stackd page.
       </div>
       <div
@@ -27,7 +27,7 @@ export default function Scan() {
         }}
       >
         <div style={{ border: '1.5px solid #2a2a2a', borderRadius: 8, width: '75%', height: '75%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 12, color: '#333', ...sans }}>Camera coming soon</span>
+          <span style={{ fontSize: 12, color: '#828282', ...sans }}>Camera coming soon</span>
         </div>
       </div>
       <button
