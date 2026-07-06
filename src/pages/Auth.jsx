@@ -44,7 +44,7 @@ export default function Auth({ onSignedUp }) {
     } else {
       const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
       if (signUpError) {
-        setError(signUpError.message)
+        setError(signUpError.code === 'user_already_exists' ? 'You already have an account with this email -- log in instead.' : signUpError.message)
       } else if (data.user) {
         await supabase.from('profiles').update({ disclaimer_accepted_at: new Date().toISOString() }).eq('id', data.user.id)
         trackEvent('signup')
