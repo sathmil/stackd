@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { NavBar, ScorePill } from '../components/ui'
+import { NavBar, ScorePill, Skeleton, ErrorState } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchListById, fetchListItems, removeListItem, deleteList, updateListVisibility } from '../lib/api/lists'
@@ -54,6 +54,7 @@ export default function ListDetail() {
   }
 
   const handleRemove = async (itemId) => {
+    if (!window.confirm('Remove this product from the list?')) return
     setRemovingId(itemId)
     await removeListItem(itemId)
     setRemovingId(null)
@@ -74,20 +75,18 @@ export default function ListDetail() {
   }
 
   if (loading) {
-    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>
+    return <Skeleton variant="rows" count={4} />
   }
 
   if (error) {
-    return (
-      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load this list. Try again in a moment.</div>
-    )
+    return <ErrorState message="Couldn't load this list. Try again in a moment." onRetry={refetch} />
   }
 
   if (!data) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="List" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>List not found, or it's private.</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, ...sans }}>List not found, or it's private.</div>
       </div>
     )
   }
@@ -135,7 +134,7 @@ export default function ListDetail() {
         )}
 
         {items.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>{isOwn ? 'Nothing here yet. Add products from their page.' : 'This list is empty.'}</div>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans }}>{isOwn ? 'Nothing here yet. Add products from their page.' : 'This list is empty.'}</div>
         )}
 
         {items.map((item, i) => {
@@ -143,16 +142,16 @@ export default function ListDetail() {
           const product = variant.products
           return (
             <div key={item.id} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ ...serif, fontSize: 13, color: '#3a3a3a', width: 16, flexShrink: 0 }}>{i + 1}</span>
-              <div onClick={() => navigate(`/product/${variant.id}`)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+              <span style={{ ...serif, fontSize: 13, color: '#828282', width: 16, flexShrink: 0 }}>{i + 1}</span>
+              <button onClick={() => navigate(`/product/${variant.id}`)} style={{ flex: 1, minWidth: 0, cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>
                 <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
                   {product.name}
                   {variant.flavor ? ` — ${variant.flavor}` : ''}
                 </div>
-                <div style={{ fontSize: 11, color: '#4a4a4a', ...sans, marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 2 }}>
                   {product.brand_name} · {formatCategory(product.category)}
                 </div>
-              </div>
+              </button>
               {item.ownerRating != null && <ScorePill score={item.ownerRating} />}
               {isOwn && (
                 <button
@@ -168,7 +167,7 @@ export default function ListDetail() {
         })}
 
         {isOwn && (
-          <button onClick={handleDeleteList} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#4a4a4a', ...sans, padding: '12px 0', marginTop: 8 }}>
+          <button onClick={handleDeleteList} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#868686', ...sans, padding: '12px 0', marginTop: 8 }}>
             Delete list
           </button>
         )}

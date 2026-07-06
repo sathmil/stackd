@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Divider } from '../components/ui'
+import { Divider, Skeleton, ErrorState } from '../components/ui'
+import { useToast } from '../components/Toast'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById } from '../lib/api/products'
@@ -17,7 +18,7 @@ function Slider({ label, value, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 13, color: '#5a5a5a', ...sans }}>{label}</span>
+        <span style={{ fontSize: 13, color: '#969696', ...sans }}>{label}</span>
         <span style={{ ...serif, fontSize: 14, color: RATING_COLOR }}>{value.toFixed(1)}</span>
       </div>
       <div style={{ position: 'relative', height: 22, display: 'flex', alignItems: 'center' }}>
@@ -55,6 +56,7 @@ export default function ReviewForm() {
   const { variantId } = useParams()
   const navigate = useNavigate()
   const user = useCurrentUser()
+  const showToast = useToast()
   // navigate(-1), not navigate(`/product/${variantId}`) -- this route is only
   // ever reached by pushing from the product page, so going back should pop
   // that entry rather than push a new one. Pushing here made the history
@@ -63,7 +65,7 @@ export default function ReviewForm() {
   // actually leaving.
   const goBack = () => navigate(-1)
 
-  const { data, loading, error } = useAsync(async () => {
+  const { data, loading, error, refetch } = useAsync(async () => {
     if (!user) return { data: null, error: null }
     const [{ data: variant, error: vErr }, { data: tags }, { data: ownReview }] = await Promise.all([fetchVariantById(variantId), fetchActiveTags(), fetchOwnReview(variantId, user.id)])
     if (vErr) return { data: null, error: vErr }
@@ -91,6 +93,10 @@ export default function ReviewForm() {
 
   const handleSubmit = async () => {
     setSubmitting(true)
+    // Optimistic: show the "done" screen right away: this is the highest-feel
+    // write in the app, and the round trip (upsert + tag sync) shouldn't be
+    // what the user waits on. Roll back to the form and toast on failure.
+    setDone(true)
     const { data: review, error } = await upsertReview({
       variantId,
       userId: user.id,
@@ -100,10 +106,12 @@ export default function ReviewForm() {
     })
     if (!error) await syncReviewTags(review.id, selectedTagIds)
     setSubmitting(false)
-    if (!error) {
-      trackEvent('review_submit', { variant_id: variantId, is_edit: isEditing })
-      setDone(true)
+    if (error) {
+      setDone(false)
+      showToast("Couldn't save your review. Try again.", 'error')
+      return
     }
+    trackEvent('review_submit', { variant_id: variantId, is_edit: isEditing })
   }
 
   const handleDelete = async () => {
@@ -115,13 +123,11 @@ export default function ReviewForm() {
   }
 
   if (loading || user === undefined) {
-    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>
+    return <Skeleton variant="detail" />
   }
 
   if (error || !data?.variant) {
-    return (
-      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load this product. Try again in a moment.</div>
-    )
+    return <ErrorState message="Couldn't load this product. Try again in a moment." onRetry={refetch} />
   }
 
   const { variant, tags } = data
@@ -134,7 +140,7 @@ export default function ReviewForm() {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#111' }}>
         <div style={{ ...serif, fontSize: 20, color: '#e8e4dc' }}>{isEditing ? 'Review updated!' : 'Review posted!'}</div>
-        <div style={{ fontSize: 13, color: '#555', ...sans }}>Thanks for rating {product.name}</div>
+        <div style={{ fontSize: 13, color: '#8f8f8f', ...sans }}>Thanks for rating {product.name}</div>
         <button onClick={goBack} style={{ marginTop: 16, background: '#f0ece4', color: '#111', border: 'none', borderRadius: 20, padding: '11px 28px', fontSize: 14, cursor: 'pointer', ...serif }}>
           Back to product
         </button>
@@ -146,7 +152,7 @@ export default function ReviewForm() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Nav */}
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
-        <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#555', ...sans, padding: 0 }}>
+        <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#8f8f8f', ...sans, padding: 0 }}>
           Cancel
         </button>
         <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>{isEditing ? 'Edit rating' : 'Rate it'}</span>
@@ -183,7 +189,7 @@ export default function ReviewForm() {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 15,
-              color: '#4a4a4a',
+              color: '#868686',
               flexShrink: 0,
               ...serif,
             }}
@@ -195,7 +201,7 @@ export default function ReviewForm() {
               {product.name}
               {variant.flavor ? ` — ${variant.flavor}` : ''}
             </div>
-            <div style={{ fontSize: 11, color: '#4a4a4a', ...sans, marginTop: 2 }}>{product.brand_name}</div>
+            <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 2 }}>{product.brand_name}</div>
           </div>
         </div>
 
@@ -208,7 +214,7 @@ export default function ReviewForm() {
 
         {/* Would buy again */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 13, color: '#5a5a5a', ...sans }}>Would you buy this again?</span>
+          <span style={{ fontSize: 13, color: '#969696', ...sans }}>Would you buy this again?</span>
           <div style={{ display: 'flex', gap: 8 }}>
             {[
               ['Yes', true],
@@ -228,7 +234,7 @@ export default function ReviewForm() {
                     ...sans,
                     background: on ? '#0d2020' : 'transparent',
                     border: on ? '0.5px solid #1a3030' : '0.5px solid #222',
-                    color: on ? '#5ecfcf' : '#555',
+                    color: on ? '#5ecfcf' : '#8f8f8f',
                   }}
                 >
                   {label}
@@ -246,7 +252,7 @@ export default function ReviewForm() {
           rows={3}
           style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '11px 13px', fontSize: 13, color: '#888', lineHeight: 1.6, outline: 'none', ...sans }}
         />
-        <div style={{ fontSize: 10, color: '#3a3a3a', ...sans, marginTop: -10 }}>Share your experience — avoid medical claims.</div>
+        <div style={{ fontSize: 10, color: '#828282', ...sans, marginTop: -10 }}>Share your experience — avoid medical claims.</div>
 
         {/* Tags */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -265,7 +271,7 @@ export default function ReviewForm() {
                     ...sans,
                     background: on ? '#0d2020' : 'transparent',
                     border: on ? '0.5px solid #1a3030' : '0.5px solid #222',
-                    color: on ? '#5ecfcf' : '#555',
+                    color: on ? '#5ecfcf' : '#8f8f8f',
                   }}
                 >
                   {tag.label}
@@ -288,7 +294,7 @@ export default function ReviewForm() {
                     ...sans,
                     background: on ? '#1e0c0c' : 'transparent',
                     border: on ? '0.5px solid #3a1515' : '0.5px solid #222',
-                    color: on ? '#ff6b6b' : '#555',
+                    color: on ? '#ff6b6b' : '#8f8f8f',
                   }}
                 >
                   {tag.label}

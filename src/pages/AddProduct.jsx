@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { NavBar } from '../components/ui'
+import { NavBar, Skeleton } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import {
@@ -43,7 +43,7 @@ const inputStyle = {
   ...sans,
 }
 
-const labelStyle = { fontSize: 11, color: '#555', ...sans }
+const labelStyle = { fontSize: 11, color: '#8f8f8f', ...sans }
 
 function Field({ label, children }) {
   return (
@@ -254,14 +254,19 @@ export default function AddProduct() {
   }
 
   if (flagLoading || (isEditing && existingLoading)) {
-    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <NavBar title={isEditing ? 'Edit product' : 'Add a product'} onBack={() => navigate(-1)} />
+        <Skeleton variant="detail" />
+      </div>
+    )
   }
 
   if (!isEditing && flagData && flagData.enabled === false) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Add a product" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, textAlign: 'center', padding: 24, ...sans }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, textAlign: 'center', padding: 24, ...sans }}>
           Adding new products is temporarily turned off. Check back soon.
         </div>
       </div>
@@ -272,7 +277,7 @@ export default function AddProduct() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Edit product" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, textAlign: 'center', padding: 24, ...sans }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, textAlign: 'center', padding: 24, ...sans }}>
           {existing && existing.products.status !== 'pending' ? "This product has already been reviewed, so it can't be edited here." : "You can only edit products you've submitted yourself."}
         </div>
       </div>
@@ -334,7 +339,7 @@ export default function AddProduct() {
         </Field>
 
         <div style={{ height: '0.5px', background: '#1e1e1e' }} />
-        <div style={{ fontSize: 10, color: '#444', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>This variant</div>
+        <div style={{ fontSize: 10, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>This variant</div>
 
         <Field label="Flavor (optional)">
           <input value={flavor} onChange={(e) => setFlavor(e.target.value)} placeholder="e.g. Peach Vibe" style={inputStyle} />

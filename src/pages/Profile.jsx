@@ -5,7 +5,8 @@ import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchProfileByUsername, fetchProfileStats, fetchReviewsForUser, fetchListsForUser, updateProfile, deleteAccount, exportUserData } from '../lib/api/profiles'
 import { compressImage, uploadImage } from '../lib/storage'
-import { Avatar, ScorePill, Card } from '../components/ui'
+import { Avatar, ScorePill, Card, Skeleton, ErrorState } from '../components/ui'
+import { useToast } from '../components/Toast'
 import { timeAgo } from '../utils/timeAgo'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
@@ -27,6 +28,7 @@ export default function Profile() {
   const { username } = useParams()
   const navigate = useNavigate()
   const currentUser = useCurrentUser()
+  const showToast = useToast()
   const [tab, setTab] = useState('reviews')
   const [editing, setEditing] = useState(false)
   const [editUsername, setEditUsername] = useState('')
@@ -90,7 +92,7 @@ export default function Profile() {
     const { error: deleteError } = await deleteAccount()
     if (deleteError) {
       setDeletingAccount(false)
-      window.alert("Couldn't delete your account. Try again in a moment.")
+      showToast("Couldn't delete your account. Try again in a moment.", 'error')
       return
     }
     await supabase.auth.signOut()
@@ -102,7 +104,7 @@ export default function Profile() {
     const { data: exportData, error: exportError } = await exportUserData(currentUser.id)
     setExportingData(false)
     if (exportError) {
-      window.alert("Couldn't export your data. Try again in a moment.")
+      showToast("Couldn't export your data. Try again in a moment.", 'error')
       return
     }
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
@@ -114,6 +116,7 @@ export default function Profile() {
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
+    showToast('Your data export is ready.')
   }
 
   const handleAvatarChange = async (e) => {
@@ -126,6 +129,9 @@ export default function Profile() {
     if (!uploadError) {
       await updateProfile(currentUser.id, { avatar_url: `${url}?t=${Date.now()}` })
       refetch()
+      showToast('Avatar updated.')
+    } else {
+      showToast("Couldn't upload your avatar. Try again in a moment.", 'error')
     }
     setUploadingAvatar(false)
   }
@@ -149,22 +155,21 @@ export default function Profile() {
       return
     }
     setEditing(false)
+    showToast('Profile updated.')
     if (editUsername.trim() !== username) navigate(`/profile/${editUsername.trim()}`, { replace: true })
     else refetch()
   }
 
   if (loading) {
-    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>
+    return <Skeleton variant="detail" />
   }
 
   if (error) {
-    return (
-      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load this profile. Try again in a moment.</div>
-    )
+    return <ErrorState message="Couldn't load this profile. Try again in a moment." onRetry={refetch} />
   }
 
   if (!data) {
-    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a3a3a', fontSize: 14, ...sans }}>Profile not found.</div>
+    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, ...sans }}>Profile not found.</div>
   }
 
   const { profile, stats, reviews, lists } = data
@@ -183,7 +188,7 @@ export default function Profile() {
         <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>Profile</span>
         <div style={{ width: 60, textAlign: 'right' }}>
           {isOwn && (
-            <button onClick={handleSignOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#555', ...sans, padding: 0 }}>
+            <button onClick={handleSignOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#8f8f8f', ...sans, padding: 0 }}>
               Sign out
             </button>
           )}
@@ -232,9 +237,9 @@ export default function Profile() {
           ) : (
             <>
               <div style={{ ...serif, fontSize: 20, color: '#f0ece4', letterSpacing: '-0.01em', marginTop: 4 }}>{profile.display_name || profile.username}</div>
-              {profile.display_name && <div style={{ fontSize: 12, color: '#4a4a4a', ...sans }}>@{profile.username}</div>}
+              {profile.display_name && <div style={{ fontSize: 12, color: '#868686', ...sans }}>@{profile.username}</div>}
               {(profile.goal || profile.location) && (
-                <div style={{ fontSize: 12, color: '#4a4a4a', ...sans }}>
+                <div style={{ fontSize: 12, color: '#868686', ...sans }}>
                   {profile.goal}
                   {profile.goal && profile.location ? ' · ' : ''}
                   {profile.location}
@@ -253,7 +258,7 @@ export default function Profile() {
           ].map((s, i) => (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 4px', borderLeft: i > 0 ? '0.5px solid #1e1e1e' : 'none' }}>
               <span style={{ ...serif, fontSize: 20, color: s.color || '#e8e4dc', letterSpacing: '-0.02em' }}>{s.val}</span>
-              <span style={{ fontSize: 9, color: '#444', ...sans, marginTop: 2 }}>{s.label}</span>
+              <span style={{ fontSize: 9, color: '#828282', ...sans, marginTop: 2 }}>{s.label}</span>
             </div>
           ))}
         </div>
@@ -276,7 +281,7 @@ export default function Profile() {
                 padding: '11px 0',
                 fontSize: 12,
                 ...sans,
-                color: tab === key ? '#e8e4dc' : '#444',
+                color: tab === key ? '#e8e4dc' : '#828282',
                 fontWeight: tab === key ? 500 : 400,
               }}
             >
@@ -288,7 +293,7 @@ export default function Profile() {
         <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {tab === 'reviews' &&
             (reviews.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>No reviews yet.</div>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#828282', fontSize: 14, ...sans }}>No reviews yet.</div>
             ) : (
               reviews.map((review) => {
                 const variant = review.product_variants
@@ -311,7 +316,7 @@ export default function Profile() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: 13,
-                            color: '#4a4a4a',
+                            color: '#868686',
                             flexShrink: 0,
                             ...serif,
                           }}
@@ -324,11 +329,11 @@ export default function Profile() {
                           {product.name}
                           {variant.flavor ? ` — ${variant.flavor}` : ''}
                         </div>
-                        <div style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>{timeAgo(review.created_at)}</div>
+                        <div style={{ fontSize: 10, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</div>
                       </div>
                       <ScorePill score={review.overall_rating} />
                     </div>
-                    {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+                    {review.notes && <div style={{ fontSize: 13, color: '#969696', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
                   </Card>
                 )
               })
@@ -336,7 +341,7 @@ export default function Profile() {
 
           {tab === 'lists' &&
             (lists.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>{isOwn ? "You haven't made any lists yet." : 'No public lists yet.'}</div>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#828282', fontSize: 14, ...sans }}>{isOwn ? "You haven't made any lists yet." : 'No public lists yet.'}</div>
             ) : (
               lists.map((list) => (
                 <div
@@ -346,11 +351,11 @@ export default function Profile() {
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
-                    <div style={{ fontSize: 11, color: '#3a3a3a', ...sans, marginTop: 3 }}>
+                    <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>
                       {list.list_items?.[0]?.count || 0} product{(list.list_items?.[0]?.count || 0) !== 1 ? 's' : ''} · {list.is_public ? 'Public' : 'Private'}
                     </div>
                   </div>
-                  <span style={{ color: '#2e2e2e', fontSize: 18 }}>›</span>
+                  <span style={{ color: '#828282', fontSize: 18 }}>›</span>
                 </div>
               ))
             ))}
@@ -375,14 +380,17 @@ export default function Profile() {
           )}
 
           {isOwn && (
-            <div style={{ textAlign: 'center', fontSize: 10, color: '#3a3a3a', ...sans, padding: '4px 0 4px' }}>
-              <span onClick={() => navigate('/terms')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+            <div style={{ textAlign: 'center', fontSize: 10, color: '#828282', ...sans, padding: '4px 0 4px' }}>
+              <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}>
                 Terms
-              </span>
+              </button>
               {' · '}
-              <span onClick={() => navigate('/privacy')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+              <button
+                onClick={() => navigate('/privacy')}
+                style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+              >
                 Privacy
-              </span>
+              </button>
             </div>
           )}
         </div>

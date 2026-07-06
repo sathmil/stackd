@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CATEGORIES } from '../data/placeholder'
-import { ScorePill, SectionLabel, Chip } from '../components/ui'
+import { ScorePill, SectionLabel, Chip, Skeleton, ErrorState } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { fetchVariantsForCatalog, fetchRatingSummaries } from '../lib/api/products'
 import { trackEvent } from '../lib/analytics'
@@ -49,7 +49,23 @@ function ProductRow({ variant }) {
   const product = variant.products
   const summary = variant.summary
   return (
-    <div onClick={() => navigate(`/product/${variant.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '0.5px solid #1a1a1a', cursor: 'pointer' }}>
+    <button
+      onClick={() => navigate(`/product/${variant.id}`)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '11px 0',
+        borderTop: 'none',
+        borderLeft: 'none',
+        borderRight: 'none',
+        borderBottom: '0.5px solid #1a1a1a',
+        background: 'none',
+        cursor: 'pointer',
+        width: '100%',
+        textAlign: 'left',
+      }}
+    >
       {variant.image_url ? (
         <img
           src={variant.image_url}
@@ -68,7 +84,7 @@ function ProductRow({ variant }) {
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 14,
-            color: '#4a4a4a',
+            color: '#868686',
             flexShrink: 0,
             ...serif,
           }}
@@ -81,7 +97,7 @@ function ProductRow({ variant }) {
           {product.name}
           {variant.flavor ? ` — ${variant.flavor}` : ''}
         </div>
-        <div style={{ fontSize: 11, color: '#4a4a4a', ...sans, marginTop: 2 }}>
+        <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 2 }}>
           {product.brand_name} · {formatCategory(product.category)}
         </div>
       </div>
@@ -90,8 +106,8 @@ function ProductRow({ variant }) {
           {product.status === 'pending' ? 'Pending' : formatCategory(product.status)}
         </span>
       )}
-      {product.status === 'approved' && (summary?.ratings_count ? <ScorePill score={summary.overall_score} /> : <span style={{ fontSize: 10, color: '#3a3a3a', ...sans }}>New</span>)}
-    </div>
+      {product.status === 'approved' && (summary?.ratings_count ? <ScorePill score={summary.overall_score} /> : <span style={{ fontSize: 10, color: '#828282', ...sans }}>New</span>)}
+    </button>
   )
 }
 
@@ -119,6 +135,7 @@ export default function Search() {
     data: variants,
     loading,
     error,
+    refetch,
   } = useAsync(async () => {
     const { data: rows, error } = await fetchVariantsForCatalog({
       query: debouncedQuery,
@@ -138,7 +155,7 @@ export default function Search() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 14px', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#181818', border: '0.5px solid #222', borderRadius: 20, padding: '10px 14px' }}>
-          <span style={{ fontSize: 16, color: '#3a3a3a' }}>⌕</span>
+          <span style={{ fontSize: 16, color: '#828282' }}>⌕</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -146,7 +163,7 @@ export default function Search() {
             style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 14, color: '#ccc', ...sans }}
           />
           {query && (
-            <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3a3a3a', fontSize: 16, padding: 0 }}>
+            <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#828282', fontSize: 16, padding: 0 }}>
               ✕
             </button>
           )}
@@ -164,12 +181,12 @@ export default function Search() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {loading && <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>}
+        {loading && <Skeleton variant="rows" />}
 
-        {error && <div style={{ textAlign: 'center', padding: '48px 0', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load the catalog. Try again in a moment.</div>}
+        {error && <ErrorState message="Couldn't load the catalog. Try again in a moment." onRetry={refetch} />}
 
         {!loading && !error && sorted.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {debouncedQuery ? (
               <>
                 <div>No products found for "{debouncedQuery}".</div>

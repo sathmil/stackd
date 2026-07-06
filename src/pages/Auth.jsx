@@ -100,7 +100,7 @@ export default function Auth({ onSignedUp }) {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ ...serif, fontStyle: 'italic', fontSize: 42, color: '#f0ece4', letterSpacing: '-0.02em', lineHeight: 1 }}>Stackd</div>
-          <div style={{ color: '#555', fontSize: 13, marginTop: 7, ...sans }}>Rate what fuels you.</div>
+          <div style={{ color: '#8f8f8f', fontSize: 13, marginTop: 7, ...sans }}>Rate what fuels you.</div>
         </div>
 
         {/* Form card */}
@@ -109,11 +109,11 @@ export default function Auth({ onSignedUp }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, color: '#555', ...sans }}>Email</label>
+              <label style={{ fontSize: 11, color: '#8f8f8f', ...sans }}>Email</label>
               <input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, color: '#555', ...sans }}>Password</label>
+              <label style={{ fontSize: 11, color: '#8f8f8f', ...sans }}>Password</label>
               <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
             </div>
           </div>
@@ -147,38 +147,38 @@ export default function Auth({ onSignedUp }) {
           </button>
 
           {isLogin && (
-            <button onClick={handleForgotPassword} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#555', ...sans, padding: 0 }}>
+            <button onClick={handleForgotPassword} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#8f8f8f', ...sans, padding: 0 }}>
               Forgot password?
             </button>
           )}
 
-          <div style={{ textAlign: 'center', fontSize: 12, color: '#444', ...sans }}>
+          <div style={{ textAlign: 'center', fontSize: 12, color: '#828282', ...sans }}>
             {isLogin ? "Don't have an account? " : 'Already have an account? '}
-            <span
+            <button
               onClick={() => {
                 setIsLogin(!isLogin)
                 setError('')
               }}
-              style={{ color: '#5ecfcf', cursor: 'pointer', fontWeight: 500 }}
+              style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: '#5ecfcf', cursor: 'pointer', fontWeight: 500 }}
             >
               {isLogin ? 'Sign up' : 'Log in'}
-            </span>
+            </button>
           </div>
 
-          <div style={{ textAlign: 'center', fontSize: 10, color: '#3a3a3a', ...sans }}>
-            <span onClick={() => navigate('/terms')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+          <div style={{ textAlign: 'center', fontSize: 10, color: '#828282', ...sans }}>
+            <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}>
               Terms
-            </span>
+            </button>
             {' · '}
-            <span onClick={() => navigate('/privacy')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+            <button onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}>
               Privacy
-            </span>
+            </button>
           </div>
         </div>
 
         {/* Value props */}
         <div style={{ marginTop: 14, background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>What you'll get</div>
+          <div style={{ fontSize: 9, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>What you'll get</div>
           {[
             { c: '#5ecfcf', t: 'See what the crowd is rating' },
             { c: '#a78bfa', t: 'Honest multi-dimensional scores' },

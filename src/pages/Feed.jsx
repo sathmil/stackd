@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Avatar, ScorePill, Card } from '../components/ui'
+import { Avatar, ScorePill, Card, Skeleton, ErrorState } from '../components/ui'
 import { fetchRecentReviews, fetchProfilesByIds, fetchTagsForReviews } from '../lib/api/reviews'
 import { timeAgo } from '../utils/timeAgo'
 import { trackEvent } from '../lib/analytics'
@@ -21,18 +21,28 @@ function FeedCard({ review }) {
 
   return (
     <Card>
-      <div
-        onClick={() => review.reviewer && navigate(`/profile/${review.reviewer.username}`)}
-        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: review.reviewer ? 'pointer' : 'default' }}
+      {review.reviewer ? (
+        <button
+          onClick={() => navigate(`/profile/${review.reviewer.username}`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
+        >
+          <Avatar user={review.reviewer} size="sm" />
+          <span style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>{review.reviewer.username}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</span>
+        </button>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>Unknown</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</span>
+        </div>
+      )}
+
+      <span style={{ fontSize: 12, color: '#868686', ...sans }}>rated a product</span>
+
+      <button
+        onClick={() => navigate(`/product/${variant.id}`)}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
       >
-        {review.reviewer && <Avatar user={review.reviewer} size="sm" />}
-        <span style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>{review.reviewer?.username || 'Unknown'}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: '#3a3a3a', ...sans }}>{timeAgo(review.created_at)}</span>
-      </div>
-
-      <span style={{ fontSize: 12, color: '#4a4a4a', ...sans }}>rated a product</span>
-
-      <div onClick={() => navigate(`/product/${variant.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
         {variant.image_url ? (
           <img src={variant.image_url} alt={variant.image_alt || product.name} style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
         ) : (
@@ -47,7 +57,7 @@ function FeedCard({ review }) {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 15,
-              color: '#4a4a4a',
+              color: '#868686',
               flexShrink: 0,
               ...serif,
             }}
@@ -60,19 +70,19 @@ function FeedCard({ review }) {
             {product.name}
             {variant.flavor ? ` — ${variant.flavor}` : ''}
           </div>
-          <div style={{ fontSize: 11, color: '#4a4a4a', ...sans, marginTop: 1 }}>
+          <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 1 }}>
             {product.brand_name} · {formatCategory(product.category)}
           </div>
         </div>
         <ScorePill score={review.overall_rating} />
-      </div>
+      </button>
 
-      {review.notes && <div style={{ fontSize: 13, color: '#5a5a5a', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+      {review.notes && <div style={{ fontSize: 13, color: '#969696', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
 
       {review.tags.length > 0 && (
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {review.tags.map((tag) => (
-            <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#4a4a4a', ...sans }}>
+            <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#868686', ...sans }}>
               {tag.label}
             </span>
           ))}
@@ -94,6 +104,7 @@ export default function Feed() {
   const loadPage = async (currentOffset, replace) => {
     const setPageLoading = replace ? setLoading : setLoadingMore
     setPageLoading(true)
+    setError(null)
 
     const { data: rows, error: fetchError } = await fetchRecentReviews({ limit: PAGE_SIZE, offset: currentOffset })
     if (fetchError) {
@@ -140,19 +151,19 @@ export default function Feed() {
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
         <span style={{ ...serif, fontStyle: 'italic', fontSize: 22, color: '#f0ece4', letterSpacing: '-0.01em' }}>Stackd</span>
         <div style={{ display: 'flex', gap: 14 }}>
-          <button onClick={() => navigate('/scan')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#3a3a3a', padding: 0 }}>
+          <button onClick={() => navigate('/scan')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#828282', padding: 0 }}>
             ▣
           </button>
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {loading && <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>Loading...</div>}
+        {loading && <Skeleton variant="rows" />}
 
-        {error && <div style={{ textAlign: 'center', padding: '48px 0', color: '#ff6b6b', fontSize: 14, ...sans }}>Couldn't load the feed. Try again in a moment.</div>}
+        {error && <ErrorState message="Couldn't load the feed. Try again in a moment." onRetry={() => loadPage(0, true)} />}
 
         {!loading && !error && reviews.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#3a3a3a', fontSize: 14, ...sans }}>No activity yet. Be the first to rate something.</div>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans }}>No activity yet. Be the first to rate something.</div>
         )}
 
         {reviews.map((review) => (

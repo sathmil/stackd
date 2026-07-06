@@ -83,8 +83,8 @@ export function BottomNav({ active, onNavigate }) {
           onClick={() => onNavigate(item.key)}
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px' }}
         >
-          <span style={{ fontSize: 20, color: active === item.key ? '#f0ece4' : '#2e2e2e', lineHeight: 1 }}>{item.icon}</span>
-          <span style={{ fontSize: 9, ...sans, color: active === item.key ? '#f0ece4' : '#2e2e2e' }}>{item.label}</span>
+          <span style={{ fontSize: 20, color: active === item.key ? '#f0ece4' : '#828282', lineHeight: 1 }}>{item.icon}</span>
+          <span style={{ fontSize: 9, ...sans, color: active === item.key ? '#f0ece4' : '#828282' }}>{item.label}</span>
         </button>
       ))}
     </div>
@@ -92,11 +92,15 @@ export function BottomNav({ active, onNavigate }) {
 }
 
 export function Card({ children, style: extra = {}, onClick }) {
-  return (
-    <div onClick={onClick} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px', display: 'flex', flexDirection: 'column', gap: 8, ...extra }}>
-      {children}
-    </div>
-  )
+  const baseStyle = { background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px', display: 'flex', flexDirection: 'column', gap: 8, ...extra }
+  if (onClick) {
+    return (
+      <button onClick={onClick} style={{ ...baseStyle, textAlign: 'left', width: '100%', font: 'inherit', color: 'inherit' }}>
+        {children}
+      </button>
+    )
+  }
+  return <div style={baseStyle}>{children}</div>
 }
 
 export function Divider() {
@@ -104,7 +108,7 @@ export function Divider() {
 }
 
 export function SectionLabel({ children }) {
-  return <span style={{ fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>{children}</span>
+  return <span style={{ fontSize: 9, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>{children}</span>
 }
 
 export function Chip({ label, active, onClick }) {
@@ -120,7 +124,7 @@ export function Chip({ label, active, onClick }) {
         whiteSpace: 'nowrap',
         border: active ? 'none' : '0.5px solid #252525',
         background: active ? '#f0ece4' : 'transparent',
-        color: active ? '#111' : '#555',
+        color: active ? '#111' : '#8f8f8f',
         fontWeight: active ? 500 : 400,
       }}
     >
@@ -132,7 +136,63 @@ export function Chip({ label, active, onClick }) {
 export function LoadingScreen() {
   return (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111' }}>
-      <div style={{ ...serif, fontStyle: 'italic', fontSize: 28, color: '#333' }}>Stackd</div>
+      <div style={{ ...serif, fontStyle: 'italic', fontSize: 28, color: '#828282' }}>Stackd</div>
+    </div>
+  )
+}
+
+/**
+ * Shared loading placeholder -- 'rows' (repeated card-shaped rows, for
+ * Feed/Search/Lists-style pages) or 'detail' (a hero block + a few text
+ * lines, for single-item pages like ProductPage/Profile). Deliberately one
+ * shared component rather than a bespoke skeleton per page, so "loading"
+ * always looks and feels the same across the app.
+ */
+export function Skeleton({ variant = 'rows', count = 5 }) {
+  if (variant === 'detail') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16 }}>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div className="skeleton-block" style={{ width: 54, height: 54, flexShrink: 0 }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+            <div className="skeleton-block" style={{ height: 16, width: '70%' }} />
+            <div className="skeleton-block" style={{ height: 12, width: '40%' }} />
+          </div>
+        </div>
+        <div className="skeleton-block" style={{ height: 80, width: '100%' }} />
+        <div className="skeleton-block" style={{ height: 60, width: '100%' }} />
+      </div>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="skeleton-block" style={{ width: 36, height: 36, flexShrink: 0 }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="skeleton-block" style={{ height: 13, width: `${60 + ((i * 13) % 30)}%` }} />
+            <div className="skeleton-block" style={{ height: 10, width: `${30 + ((i * 7) % 20)}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Shared error state with an actual recovery path -- useAsync already
+ * returns refetch(), but no page ever called it from the error branch, so
+ * every load failure required a full page reload to recover from.
+ */
+export function ErrorState({ message = "Couldn't load this. Try again in a moment.", onRetry }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '48px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+      <div style={{ color: '#ff6b6b', fontSize: 14, ...sans }}>{message}</div>
+      {onRetry && (
+        <button onClick={onRetry} style={{ background: 'none', border: '0.5px solid #3a1a1a', borderRadius: 20, padding: '8px 18px', fontSize: 12, color: '#ff6b6b', cursor: 'pointer', ...sans }}>
+          Try again
+        </button>
+      )}
     </div>
   )
 }
@@ -141,7 +201,7 @@ export function NavBar({ title, onBack, rightEl }) {
   return (
     <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
       {onBack ? (
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#555', padding: 0, lineHeight: 1 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#8f8f8f', padding: 0, lineHeight: 1 }}>
           ←
         </button>
       ) : (

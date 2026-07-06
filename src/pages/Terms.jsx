@@ -19,7 +19,7 @@ export default function Terms() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <NavBar title="Terms of Service" onBack={() => navigate(-1)} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <div style={{ fontSize: 11, color: '#555', ...sans }}>Last updated: July 2026</div>
+        <div style={{ fontSize: 11, color: '#8f8f8f', ...sans }}>Last updated: July 2026</div>
 
         <Section title="What Stackd is">
           Stackd is a review and ranking app for energy drinks, protein bars, and supplements. You can rate products, write reviews, build ranked lists, and see what the community thinks -- plus an
