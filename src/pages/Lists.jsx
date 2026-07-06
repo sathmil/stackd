@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { useOwnUsername } from '../hooks/useOwnUsername'
 import { fetchOwnLists, createList } from '../lib/api/lists'
 import { trackEvent } from '../lib/analytics'
 import { Skeleton, ErrorState } from '../components/ui'
@@ -12,6 +13,7 @@ const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-
 export default function Lists() {
   const navigate = useNavigate()
   const user = useCurrentUser()
+  const ownUsername = useOwnUsername(!!user)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [isPublic, setIsPublic] = useState(true)
@@ -84,6 +86,30 @@ export default function Lists() {
           </div>
         )}
 
+        {ownUsername && (
+          <button
+            onClick={() => navigate(`/rated/${ownUsername}`)}
+            style={{
+              background: '#181818',
+              border: '0.5px solid #2a3a3a',
+              borderRadius: 12,
+              padding: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              cursor: 'pointer',
+              width: '100%',
+              textAlign: 'left',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ ...serif, fontSize: 14, color: '#5ecfcf', letterSpacing: '-0.01em' }}>My rated products</div>
+              <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>Everything you've rated, ranked automatically</div>
+            </div>
+            <span style={{ color: '#828282', fontSize: 18 }}>›</span>
+          </button>
+        )}
+
         {loading && <Skeleton variant="rows" count={3} />}
 
         {error && <ErrorState message="Couldn't load your lists. Try again in a moment." onRetry={refetch} />}
@@ -95,10 +121,21 @@ export default function Lists() {
         {!loading &&
           !error &&
           lists?.map((list) => (
-            <div
+            <button
               key={list.id}
               onClick={() => navigate(`/lists/${list.id}`)}
-              style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+              style={{
+                background: '#181818',
+                border: '0.5px solid #222',
+                borderRadius: 12,
+                padding: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left',
+              }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
@@ -107,7 +144,7 @@ export default function Lists() {
                 </div>
               </div>
               <span style={{ color: '#828282', fontSize: 18 }}>›</span>
-            </div>
+            </button>
           ))}
       </div>
     </div>

@@ -30,6 +30,17 @@ export async function fetchReviewsForUser(userId) {
 }
 
 /**
+ * Same rows as fetchReviewsForUser, but ordered by the reviewer's own
+ * rating rather than recency -- this is the "ranked catalog" view (an
+ * automatically-derived list, not a real row in `lists`/`list_items`, so it
+ * never drifts out of sync with a user's actual reviews).
+ * @param {string} userId
+ */
+export async function fetchRatedProductsForUser(userId) {
+  return supabase.from('reviews').select('*, product_variants(*, products(*))').eq('user_id', userId).eq('status', 'visible').order('overall_rating', { ascending: false })
+}
+
+/**
  * No is_public filter -- RLS ("lists select public or own") already
  * returns everything when the viewer is the owner and only public rows
  * otherwise, so this one query is correct for both cases.

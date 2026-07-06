@@ -38,3 +38,33 @@ export async function uploadImage(blob, bucket, path, { upsert = false } = {}) {
   const { data } = supabase.storage.from(bucket).getPublicUrl(path)
   return { url: data.publicUrl, error: null }
 }
+
+const AVATAR_OUTPUT_SIZE = 400
+
+/**
+ * Draws the user-chosen crop rectangle (in the original image's natural
+ * pixel coordinates, as produced by react-easy-crop's onCropComplete) onto a
+ * fixed-size square canvas and re-encodes it as WebP -- this is the final
+ * upload-ready blob, no separate compressImage pass needed since the canvas
+ * is already downscaled to AVATAR_OUTPUT_SIZE.
+ * @param {string} imageSrc -- object URL for the source file
+ * @param {{ x: number, y: number, width: number, height: number }} cropPixels
+ * @returns {Promise<Blob>}
+ */
+export async function cropImageToBlob(imageSrc, cropPixels) {
+  const image = await new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = imageSrc
+  })
+
+  const canvas = document.createElement('canvas')
+  canvas.width = AVATAR_OUTPUT_SIZE
+  canvas.height = AVATAR_OUTPUT_SIZE
+  canvas.getContext('2d').drawImage(image, cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height, 0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE)
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Image crop failed'))), 'image/webp', 0.85)
+  })
+}
