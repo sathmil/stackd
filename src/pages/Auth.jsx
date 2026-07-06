@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { trackEvent } from '../lib/analytics'
 
@@ -6,6 +7,7 @@ const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
 
 export default function Auth({ onSignedUp }) {
+  const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -160,6 +162,16 @@ export default function Auth({ onSignedUp }) {
               style={{ color: '#5ecfcf', cursor: 'pointer', fontWeight: 500 }}
             >
               {isLogin ? 'Sign up' : 'Log in'}
+            </span>
+          </div>
+
+          <div style={{ textAlign: 'center', fontSize: 10, color: '#3a3a3a', ...sans }}>
+            <span onClick={() => navigate('/terms')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+              Terms
+            </span>
+            {' · '}
+            <span onClick={() => navigate('/privacy')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+              Privacy
             </span>
           </div>
         </div>

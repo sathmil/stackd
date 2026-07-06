@@ -14,6 +14,8 @@ import Profile from './pages/Profile'
 import Lists from './pages/Lists'
 import ListDetail from './pages/ListDetail'
 import AddProduct from './pages/AddProduct'
+import Terms from './pages/Terms'
+import Privacy from './pages/Privacy'
 import { BottomNav, LoadingScreen } from './components/ui'
 
 function AuthRoute({ session, onSignedUp }) {
@@ -51,6 +53,8 @@ function AppShell({ session, setJustSignedUp }) {
         <Routes>
           <Route path="/auth" element={<AuthRoute session={session} onSignedUp={() => setJustSignedUp(true)} />} />
           <Route path="/reset-password" element={<ResetPassword onDone={() => navigate('/feed')} />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route
             path="/feed"
             element={
