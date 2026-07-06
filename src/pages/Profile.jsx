@@ -1,12 +1,13 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchProfileByUsername, fetchProfileStats, fetchReviewsForUser, fetchListsForUser, updateProfile, deleteAccount, exportUserData } from '../lib/api/profiles'
-import { compressImage, uploadImage } from '../lib/storage'
+import { uploadImage } from '../lib/storage'
 import { Avatar, ScorePill, Card, Skeleton, ErrorState } from '../components/ui'
 import { useToast } from '../components/Toast'
+import AvatarCropModal from '../components/AvatarCropModal'
 import { timeAgo } from '../utils/timeAgo'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
@@ -38,6 +39,8 @@ export default function Profile() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null)
+  const avatarInputRef = useRef(null)
   const [worldCities, setWorldCities] = useState(null)
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [exportingData, setExportingData] = useState(false)
@@ -119,11 +122,15 @@ export default function Profile() {
     showToast('Your data export is ready.')
   }
 
-  const handleAvatarChange = async (e) => {
+  const handleAvatarFileSelected = (e) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    e.target.value = '' // allow re-selecting the same file later
+    if (file) setPendingAvatarFile(file)
+  }
+
+  const handleAvatarCropped = async (blob) => {
+    setPendingAvatarFile(null)
     setUploadingAvatar(true)
-    const blob = await compressImage(file)
     const path = `${currentUser.id}/avatar.webp`
     const { url, error: uploadError } = await uploadImage(blob, 'avatars', path, { upsert: true })
     if (!uploadError) {
@@ -202,9 +209,25 @@ export default function Profile() {
 
           {editing ? (
             <div style={{ width: '100%', maxWidth: 300, display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <input type="file" accept="image/*" onChange={handleAvatarChange} disabled={uploadingAvatar} style={{ fontSize: 11, color: '#888', ...sans }} />
-              </label>
+              <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarFileSelected} disabled={uploadingAvatar} style={{ display: 'none' }} />
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                style={{
+                  alignSelf: 'center',
+                  background: 'none',
+                  border: '0.5px solid #2a2a2a',
+                  borderRadius: 20,
+                  padding: '8px 16px',
+                  fontSize: 12,
+                  color: '#ccc',
+                  cursor: uploadingAvatar ? 'default' : 'pointer',
+                  opacity: uploadingAvatar ? 0.5 : 1,
+                  ...sans,
+                }}
+              >
+                {uploadingAvatar ? 'Uploading...' : 'Change profile photo'}
+              </button>
               <input value={editUsername} onChange={(e) => setEditUsername(e.target.value)} placeholder="Username" style={inputStyle} />
               <input value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} placeholder="Display name (optional)" style={inputStyle} />
               <input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder="Location (optional)" list="location-options" style={inputStyle} />
@@ -339,26 +362,66 @@ export default function Profile() {
               })
             ))}
 
-          {tab === 'lists' &&
-            (lists.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#828282', fontSize: 14, ...sans }}>{isOwn ? "You haven't made any lists yet." : 'No public lists yet.'}</div>
-            ) : (
-              lists.map((list) => (
-                <div
-                  key={list.id}
-                  onClick={() => navigate(`/lists/${list.id}`)}
-                  style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+          {tab === 'lists' && (
+            <>
+              {stats.reviewCount > 0 && (
+                <button
+                  onClick={() => navigate(`/rated/${profile.username}`)}
+                  style={{
+                    background: '#181818',
+                    border: '0.5px solid #2a3a3a',
+                    borderRadius: 10,
+                    padding: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                  }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
-                    <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>
-                      {list.list_items?.[0]?.count || 0} product{(list.list_items?.[0]?.count || 0) !== 1 ? 's' : ''} · {list.is_public ? 'Public' : 'Private'}
+                    <div style={{ ...serif, fontSize: 14, color: '#5ecfcf', letterSpacing: '-0.01em' }}>
+                      {isOwn ? 'My rated products' : `${profile.display_name || profile.username}'s rated products`}
                     </div>
+                    <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>Ranked automatically by rating</div>
                   </div>
                   <span style={{ color: '#828282', fontSize: 18 }}>›</span>
-                </div>
-              ))
-            ))}
+                </button>
+              )}
+
+              {lists.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: '#828282', fontSize: 14, ...sans }}>{isOwn ? "You haven't made any lists yet." : 'No public lists yet.'}</div>
+              ) : (
+                lists.map((list) => (
+                  <button
+                    key={list.id}
+                    onClick={() => navigate(`/lists/${list.id}`)}
+                    style={{
+                      background: '#181818',
+                      border: '0.5px solid #222',
+                      borderRadius: 10,
+                      padding: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      cursor: 'pointer',
+                      width: '100%',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
+                      <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>
+                        {list.list_items?.[0]?.count || 0} product{(list.list_items?.[0]?.count || 0) !== 1 ? 's' : ''} · {list.is_public ? 'Public' : 'Private'}
+                      </div>
+                    </div>
+                    <span style={{ color: '#828282', fontSize: 18 }}>›</span>
+                  </button>
+                ))
+              )}
+            </>
+          )}
 
           {isOwn && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 0 4px' }}>
@@ -395,6 +458,8 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {pendingAvatarFile && <AvatarCropModal file={pendingAvatarFile} onCancel={() => setPendingAvatarFile(null)} onCropped={handleAvatarCropped} />}
     </div>
   )
 }
