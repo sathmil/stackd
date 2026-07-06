@@ -43,3 +43,31 @@ export async function fetchListsForUser(userId) {
 export async function updateProfile(userId, fields) {
   return supabase.from('profiles').update(fields).eq('id', userId).select().single()
 }
+
+/**
+ * Anonymizes the caller's own profile and bans their auth account -- see
+ * supabase/functions/delete-account for why this isn't a hard delete
+ * (reviews/list_items would cascade-delete along with auth.users, silently
+ * changing aggregate scores for everyone else who rated the same products).
+ */
+export async function deleteAccount() {
+  return supabase.functions.invoke('delete-account', { body: {} })
+}
+
+/**
+ * Everything RLS already lets this user read about themselves, scoped by
+ * userId rather than a broader table scan -- no service role needed. Unlike
+ * fetchReviewsForUser/fetchListsForUser (which filter to what's fit for
+ * public display), this pulls every status so the export is complete.
+ * @param {string} userId
+ */
+export async function exportUserData(userId) {
+  const [{ data: profile, error: profileErr }, { data: reviews, error: reviewsErr }, { data: lists, error: listsErr }] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).single(),
+    supabase.from('reviews').select('*, product_variants(flavor, size, products(name, brand_name))').eq('user_id', userId),
+    supabase.from('lists').select('*, list_items(*, product_variants(flavor, size, products(name, brand_name)))').eq('user_id', userId),
+  ])
+  const error = profileErr || reviewsErr || listsErr
+  if (error) return { data: null, error }
+  return { data: { exported_at: new Date().toISOString(), profile, reviews: reviews || [], lists: lists || [] }, error: null }
+}

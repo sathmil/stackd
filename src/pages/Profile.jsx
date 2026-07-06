@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { fetchProfileByUsername, fetchProfileStats, fetchReviewsForUser, fetchListsForUser, updateProfile } from '../lib/api/profiles'
+import { fetchProfileByUsername, fetchProfileStats, fetchReviewsForUser, fetchListsForUser, updateProfile, deleteAccount, exportUserData } from '../lib/api/profiles'
 import { compressImage, uploadImage } from '../lib/storage'
 import { Avatar, ScorePill, Card } from '../components/ui'
 import { timeAgo } from '../utils/timeAgo'
@@ -37,6 +37,8 @@ export default function Profile() {
   const [profileError, setProfileError] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [worldCities, setWorldCities] = useState(null)
+  const [deletingAccount, setDeletingAccount] = useState(false)
+  const [exportingData, setExportingData] = useState(false)
 
   // ~33k entries, population >= 15,000 (GeoNames, CC-BY 4.0) -- lazy-loaded
   // only once the edit form is actually open, as its own chunk, so it never
@@ -80,6 +82,38 @@ export default function Profile() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     navigate('/auth')
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Delete your account? Your username, display name, avatar, and profile info will be permanently removed and you'll be signed out for good. This cannot be undone.")) return
+    setDeletingAccount(true)
+    const { error: deleteError } = await deleteAccount()
+    if (deleteError) {
+      setDeletingAccount(false)
+      window.alert("Couldn't delete your account. Try again in a moment.")
+      return
+    }
+    await supabase.auth.signOut()
+    navigate('/auth')
+  }
+
+  const handleExportData = async () => {
+    setExportingData(true)
+    const { data: exportData, error: exportError } = await exportUserData(currentUser.id)
+    setExportingData(false)
+    if (exportError) {
+      window.alert("Couldn't export your data. Try again in a moment.")
+      return
+    }
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `stackd-data-export-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
   }
 
   const handleAvatarChange = async (e) => {
@@ -320,6 +354,37 @@ export default function Profile() {
                 </div>
               ))
             ))}
+
+          {isOwn && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 0 4px' }}>
+              <button
+                onClick={handleExportData}
+                disabled={exportingData}
+                style={{ background: 'none', border: 'none', cursor: exportingData ? 'default' : 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0, opacity: exportingData ? 0.5 : 1 }}
+              >
+                {exportingData ? 'Preparing export...' : 'Export my data'}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                style={{ background: 'none', border: 'none', cursor: deletingAccount ? 'default' : 'pointer', fontSize: 12, color: '#ff6b6b', ...sans, padding: 0, opacity: deletingAccount ? 0.5 : 1 }}
+              >
+                {deletingAccount ? 'Deleting account...' : 'Delete my account'}
+              </button>
+            </div>
+          )}
+
+          {isOwn && (
+            <div style={{ textAlign: 'center', fontSize: 10, color: '#3a3a3a', ...sans, padding: '4px 0 4px' }}>
+              <span onClick={() => navigate('/terms')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+                Terms
+              </span>
+              {' · '}
+              <span onClick={() => navigate('/privacy')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+                Privacy
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -300,6 +300,9 @@ export default function ProductPage() {
               )}
             </button>
             {variant.ai_ingredient_summary && <div style={{ fontSize: 12, color: '#5a5a5a', ...sans, lineHeight: 1.6 }}>{variant.ai_ingredient_summary}</div>}
+            {variant.ai_ingredient_quality_score != null && (
+              <div style={{ fontSize: 10, color: '#3a3a3a', ...sans, fontStyle: 'italic' }}>AI-generated estimate, not medical or nutritional advice.</div>
+            )}
           </div>
         </div>
 
