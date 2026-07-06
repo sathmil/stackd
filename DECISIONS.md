@@ -27,6 +27,12 @@ A short log of what was deliberately deferred or ruled out, and why, so it doesn
 - **Separate production Supabase project deferred.** Not worth the split (and possible plan/cost implications) until closer to actually inviting the 20-50 people from the MVP success criteria. `supabase/migrations/` is already initialized with the current schema as a baseline (Phase 9), so creating the prod project and applying migrations to it later is a mechanical step, not a redesign.
 - **Forgot-password full click-through: confirmed working end-to-end.** The original failure (landing on the login screen instead of the reset form) was Supabase's default email template linking directly to its own hosted verify endpoint -- a plain server-side GET that consumes the one-time token immediately, exactly what Stanford's Proofpoint URL Defense triggers by pre-scanning the link before the real click. Fixed by pointing the email template at the app's own `/reset-password` route with a `token_hash` instead, exchanged explicitly via `verifyOtp()` (gated behind a real button tap, which an automated scanner never performs) -- see `ResetPassword.jsx`'s comment for the full mechanism. Retested live: request email -> click link -> set new password -> lands in Feed, no loop, no burned token.
 
+## Backup, rollback, kill-switch (Phase 11)
+
+- **Point-in-time recovery/daily backups: not applicable yet.** This is a tier property of the *production* Supabase project, which doesn't exist yet (see the deferred prod-project split above) -- nothing to confirm until that project exists. Revisit alongside creating it.
+- **Vercel rollback**: already one click in the Vercel dashboard, platform-native, nothing to build.
+- **`feature_flags` kill-switches verified live.** Flipped both `product_submission` and `ai_ingredient_analysis` off against the real dev project (with the user's explicit go-ahead, since it briefly affects real accounts) and confirmed each takes effect immediately with no deploy: `AddProduct.jsx` showed "Adding new products is temporarily turned off" instead of the form, and the `analyze-ingredients` Edge Function returned `{"error":"ai_ingredient_analysis is disabled"}` instead of calling OpenAI. Flipped both back on and confirmed normal behavior returned.
+
 ## Technical scope
 
 - **No barcode/camera scanning yet.** `Scan.jsx` stays a stub with a manual "Add a product" fallback. Barcode is core to this category eventually, but building real camera + external-API integration before the core rating loop even works would be backwards.
