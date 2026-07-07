@@ -17,7 +17,7 @@ function ErrorFallback() {
         background: '#111',
         color: '#888',
         fontFamily: 'sans-serif',
-        fontSize: 14,
+        fontSize: 15,
         textAlign: 'center',
         padding: 24,
       }}

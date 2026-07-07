@@ -7,7 +7,7 @@ import { fetchVariantsForCatalog, fetchRatingSummaries } from '../lib/api/produc
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 const CATEGORY_DB_VALUES = {
   Energy: ['energy_drink'],
@@ -83,7 +83,7 @@ function ProductRow({ variant }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 14,
+            fontSize: 15,
             color: '#868686',
             flexShrink: 0,
             ...serif,
@@ -93,20 +93,20 @@ function ProductRow({ variant }) {
         </div>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+        <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
           {product.name}
           {variant.flavor ? ` — ${variant.flavor}` : ''}
         </div>
-        <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 2 }}>
+        <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 2 }}>
           {product.brand_name} · {formatCategory(product.category)}
         </div>
       </div>
       {product.status !== 'approved' && (
-        <span style={{ background: '#252010', border: '0.5px solid #352f1a', color: '#e8c97a', borderRadius: 20, padding: '2px 8px', fontSize: 9, fontWeight: 500, ...sans, flexShrink: 0 }}>
+        <span style={{ background: '#252010', border: '0.5px solid #352f1a', color: '#e8c97a', borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 500, ...sans, flexShrink: 0 }}>
           {product.status === 'pending' ? 'Pending' : formatCategory(product.status)}
         </span>
       )}
-      {product.status === 'approved' && (summary?.ratings_count ? <ScorePill score={summary.overall_score} /> : <span style={{ fontSize: 10, color: '#828282', ...sans }}>New</span>)}
+      {product.status === 'approved' && (summary?.ratings_count ? <ScorePill score={summary.overall_score} /> : <span style={{ fontSize: 11, color: '#828282', ...sans }}>New</span>)}
     </button>
   )
 }
@@ -155,15 +155,15 @@ export default function Search() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 14px', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#181818', border: '0.5px solid #222', borderRadius: 20, padding: '10px 14px' }}>
-          <span style={{ fontSize: 16, color: '#828282' }}>⌕</span>
+          <span style={{ fontSize: 17, color: '#828282' }}>⌕</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search products, brands..."
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 14, color: '#ccc', ...sans }}
+            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 15, color: '#ccc', ...sans }}
           />
           {query && (
-            <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#828282', fontSize: 16, padding: 0 }}>
+            <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#828282', fontSize: 17, padding: 0 }}>
               ✕
             </button>
           )}
@@ -186,11 +186,11 @@ export default function Search() {
         {error && <ErrorState message="Couldn't load the catalog. Try again in a moment." onRetry={refetch} />}
 
         {!loading && !error && sorted.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 15, ...sans, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {debouncedQuery ? (
               <>
                 <div>No products found for "{debouncedQuery}".</div>
-                <button onClick={() => navigate('/add-product')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#5ecfcf', ...sans, padding: 0 }}>
+                <button onClick={() => navigate('/add-product')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: '#5ecfcf', ...sans, padding: 0 }}>
                   Can't find it? Add a product.
                 </button>
               </>
@@ -211,7 +211,7 @@ export default function Search() {
             {visibleCount < sorted.length && (
               <button
                 onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                style={{ background: 'none', border: '0.5px solid #222', borderRadius: 20, padding: '10px 0', fontSize: 13, color: '#888', cursor: 'pointer', ...sans, marginTop: 8 }}
+                style={{ background: 'none', border: '0.5px solid #222', borderRadius: 20, padding: '10px 0', fontSize: 14, color: '#888', cursor: 'pointer', ...sans, marginTop: 8 }}
               >
                 Load more
               </button>

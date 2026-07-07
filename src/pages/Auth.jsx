@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 export default function Auth({ onSignedUp }) {
   const navigate = useNavigate()
@@ -21,7 +21,7 @@ export default function Auth({ onSignedUp }) {
     border: '0.5px solid #252525',
     borderRadius: 8,
     padding: '11px 13px',
-    fontSize: 14,
+    fontSize: 15,
     color: '#ccc',
     outline: 'none',
     width: '100%',
@@ -84,9 +84,9 @@ export default function Auth({ onSignedUp }) {
             textAlign: 'center',
           }}
         >
-          <div style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>Check your email</div>
-          <div style={{ fontSize: 13, color: '#888', ...sans, lineHeight: 1.6 }}>We sent a password reset link to {email}.</div>
-          <button onClick={() => setResetSent(false)} style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans }}>
+          <div style={{ ...serif, fontSize: 17, color: '#e8e4dc' }}>Check your email</div>
+          <div style={{ fontSize: 14, color: '#888', ...sans, lineHeight: 1.6 }}>We sent a password reset link to {email}.</div>
+          <button onClick={() => setResetSent(false)} style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#5ecfcf', ...sans }}>
             Back to login
           </button>
         </div>
@@ -100,20 +100,20 @@ export default function Auth({ onSignedUp }) {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ ...serif, fontStyle: 'italic', fontSize: 42, color: '#f0ece4', letterSpacing: '-0.02em', lineHeight: 1 }}>Stackd</div>
-          <div style={{ color: '#8f8f8f', fontSize: 13, marginTop: 7, ...sans }}>Rate what fuels you.</div>
+          <div style={{ color: '#8f8f8f', fontSize: 14, marginTop: 7, ...sans }}>Rate what fuels you.</div>
         </div>
 
         {/* Form card */}
         <div style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 16, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ ...serif, fontSize: 16, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isLogin ? 'Welcome back' : 'Create your account'}</div>
+          <div style={{ ...serif, fontSize: 17, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isLogin ? 'Welcome back' : 'Create your account'}</div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, color: '#8f8f8f', ...sans }}>Email</label>
+              <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Email</label>
               <input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 11, color: '#8f8f8f', ...sans }}>Password</label>
+              <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Password</label>
               <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
             </div>
           </div>
@@ -121,11 +121,11 @@ export default function Auth({ onSignedUp }) {
           {!isLogin && (
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={disclaimerAccepted} onChange={(e) => setDisclaimerAccepted(e.target.checked)} style={{ marginTop: 2 }} />
-              <span style={{ fontSize: 11, color: '#666', ...sans, lineHeight: 1.5 }}>High-caffeine products aren't recommended for minors -- I confirm I'm old enough to use this app.</span>
+              <span style={{ fontSize: 12, color: '#666', ...sans, lineHeight: 1.5 }}>High-caffeine products aren't recommended for minors -- I confirm I'm old enough to use this app.</span>
             </label>
           )}
 
-          {error && <div style={{ fontSize: 12, color: '#ff6b6b', ...sans }}>{error}</div>}
+          {error && <div style={{ fontSize: 13, color: '#ff6b6b', ...sans }}>{error}</div>}
 
           <button
             onClick={handleSubmit}
@@ -135,7 +135,7 @@ export default function Auth({ onSignedUp }) {
               color: '#111',
               borderRadius: 20,
               padding: '13px 0',
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: 500,
               border: 'none',
               cursor: submitting ? 'default' : 'pointer',
@@ -147,12 +147,12 @@ export default function Auth({ onSignedUp }) {
           </button>
 
           {isLogin && (
-            <button onClick={handleForgotPassword} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#8f8f8f', ...sans, padding: 0 }}>
+            <button onClick={handleForgotPassword} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#8f8f8f', ...sans, padding: 0 }}>
               Forgot password?
             </button>
           )}
 
-          <div style={{ textAlign: 'center', fontSize: 12, color: '#828282', ...sans }}>
+          <div style={{ textAlign: 'center', fontSize: 13, color: '#828282', ...sans }}>
             {isLogin ? "Don't have an account? " : 'Already have an account? '}
             <button
               onClick={() => {
@@ -165,7 +165,7 @@ export default function Auth({ onSignedUp }) {
             </button>
           </div>
 
-          <div style={{ textAlign: 'center', fontSize: 10, color: '#828282', ...sans }}>
+          <div style={{ textAlign: 'center', fontSize: 11, color: '#828282', ...sans }}>
             <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}>
               Terms
             </button>
@@ -178,7 +178,7 @@ export default function Auth({ onSignedUp }) {
 
         {/* Value props */}
         <div style={{ marginTop: 14, background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 9, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>What you'll get</div>
+          <div style={{ fontSize: 10, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>What you'll get</div>
           {[
             { c: '#5ecfcf', t: 'See what the crowd is rating' },
             { c: '#a78bfa', t: 'Honest multi-dimensional scores' },
@@ -186,7 +186,7 @@ export default function Auth({ onSignedUp }) {
           ].map(({ c, t }) => (
             <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: '#666', ...sans }}>{t}</span>
+              <span style={{ fontSize: 14, color: '#666', ...sans }}>{t}</span>
             </div>
           ))}
         </div>

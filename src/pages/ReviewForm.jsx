@@ -9,7 +9,7 @@ import { fetchActiveTags, fetchOwnReview, upsertReview, syncReviewTags, deleteRe
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 const RATING_COLOR = '#5ecfcf'
 
@@ -18,8 +18,8 @@ function Slider({ label, value, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 13, color: '#969696', ...sans }}>{label}</span>
-        <span style={{ ...serif, fontSize: 14, color: RATING_COLOR }}>{value.toFixed(1)}</span>
+        <span style={{ fontSize: 14, color: '#969696', ...sans }}>{label}</span>
+        <span style={{ ...serif, fontSize: 15, color: RATING_COLOR }}>{value.toFixed(1)}</span>
       </div>
       <div style={{ position: 'relative', height: 22, display: 'flex', alignItems: 'center' }}>
         <div style={{ position: 'absolute', left: 0, right: 0, height: 3, background: '#1e1e1e', borderRadius: 2 }}>
@@ -140,8 +140,8 @@ export default function ReviewForm() {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#111' }}>
         <div style={{ ...serif, fontSize: 20, color: '#e8e4dc' }}>{isEditing ? 'Review updated!' : 'Review posted!'}</div>
-        <div style={{ fontSize: 13, color: '#8f8f8f', ...sans }}>Thanks for rating {product.name}</div>
-        <button onClick={goBack} style={{ marginTop: 16, background: '#f0ece4', color: '#111', border: 'none', borderRadius: 20, padding: '11px 28px', fontSize: 14, cursor: 'pointer', ...serif }}>
+        <div style={{ fontSize: 14, color: '#8f8f8f', ...sans }}>Thanks for rating {product.name}</div>
+        <button onClick={goBack} style={{ marginTop: 16, background: '#f0ece4', color: '#111', border: 'none', borderRadius: 20, padding: '11px 28px', fontSize: 15, cursor: 'pointer', ...serif }}>
           Back to product
         </button>
       </div>
@@ -152,10 +152,10 @@ export default function ReviewForm() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Nav */}
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
-        <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#8f8f8f', ...sans, padding: 0 }}>
+        <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#8f8f8f', ...sans, padding: 0 }}>
           Cancel
         </button>
-        <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>{isEditing ? 'Edit rating' : 'Rate it'}</span>
+        <span style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>{isEditing ? 'Edit rating' : 'Rate it'}</span>
         <button
           onClick={handleSubmit}
           disabled={submitting}
@@ -163,7 +163,7 @@ export default function ReviewForm() {
             background: 'none',
             border: 'none',
             cursor: submitting ? 'default' : 'pointer',
-            fontSize: 13,
+            fontSize: 14,
             color: '#5ecfcf',
             ...sans,
             fontWeight: 500,
@@ -188,7 +188,7 @@ export default function ReviewForm() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 15,
+              fontSize: 16,
               color: '#868686',
               flexShrink: 0,
               ...serif,
@@ -197,11 +197,11 @@ export default function ReviewForm() {
             {product.name.charAt(0)}
           </div>
           <div>
-            <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+            <div style={{ ...serif, fontSize: 16, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
               {product.name}
               {variant.flavor ? ` — ${variant.flavor}` : ''}
             </div>
-            <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 2 }}>{product.brand_name}</div>
+            <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 2 }}>{product.brand_name}</div>
           </div>
         </div>
 
@@ -214,7 +214,7 @@ export default function ReviewForm() {
 
         {/* Would buy again */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 13, color: '#969696', ...sans }}>Would you buy this again?</span>
+          <span style={{ fontSize: 14, color: '#969696', ...sans }}>Would you buy this again?</span>
           <div style={{ display: 'flex', gap: 8 }}>
             {[
               ['Yes', true],
@@ -229,7 +229,7 @@ export default function ReviewForm() {
                     flex: 1,
                     borderRadius: 20,
                     padding: '9px 0',
-                    fontSize: 13,
+                    fontSize: 14,
                     cursor: 'pointer',
                     ...sans,
                     background: on ? '#0d2020' : 'transparent',
@@ -250,9 +250,9 @@ export default function ReviewForm() {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '11px 13px', fontSize: 13, color: '#888', lineHeight: 1.6, outline: 'none', ...sans }}
+          style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '11px 13px', fontSize: 14, color: '#888', lineHeight: 1.6, outline: 'none', ...sans }}
         />
-        <div style={{ fontSize: 10, color: '#828282', ...sans, marginTop: -10 }}>Share your experience — avoid medical claims.</div>
+        <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: -10 }}>Share your experience — avoid medical claims.</div>
 
         {/* Tags */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -266,7 +266,7 @@ export default function ReviewForm() {
                   style={{
                     borderRadius: 20,
                     padding: '5px 12px',
-                    fontSize: 12,
+                    fontSize: 13,
                     cursor: 'pointer',
                     ...sans,
                     background: on ? '#0d2020' : 'transparent',
@@ -289,7 +289,7 @@ export default function ReviewForm() {
                   style={{
                     borderRadius: 20,
                     padding: '5px 12px',
-                    fontSize: 12,
+                    fontSize: 13,
                     cursor: 'pointer',
                     ...sans,
                     background: on ? '#1e0c0c' : 'transparent',
@@ -313,7 +313,7 @@ export default function ReviewForm() {
             color: '#111',
             borderRadius: 20,
             padding: '14px 0',
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: 500,
             border: 'none',
             cursor: submitting ? 'default' : 'pointer',
@@ -332,7 +332,7 @@ export default function ReviewForm() {
               background: 'none',
               border: 'none',
               cursor: deleting ? 'default' : 'pointer',
-              fontSize: 12,
+              fontSize: 13,
               color: '#ff6b6b',
               ...sans,
               padding: '4px 0 20px',

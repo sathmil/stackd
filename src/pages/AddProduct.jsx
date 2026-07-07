@@ -18,7 +18,7 @@ import { compressImage, uploadImage } from '../lib/storage'
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 const CATEGORIES = [
   ['energy_drink', 'Energy drink'],
@@ -36,14 +36,14 @@ const inputStyle = {
   border: '0.5px solid #252525',
   borderRadius: 8,
   padding: '11px 13px',
-  fontSize: 14,
+  fontSize: 15,
   color: '#ccc',
   outline: 'none',
   width: '100%',
   ...sans,
 }
 
-const labelStyle = { fontSize: 11, color: '#8f8f8f', ...sans }
+const labelStyle = { fontSize: 12, color: '#8f8f8f', ...sans }
 
 function Field({ label, children }) {
   return (
@@ -266,7 +266,7 @@ export default function AddProduct() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Add a product" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, textAlign: 'center', padding: 24, ...sans }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 15, textAlign: 'center', padding: 24, ...sans }}>
           Adding new products is temporarily turned off. Check back soon.
         </div>
       </div>
@@ -277,7 +277,7 @@ export default function AddProduct() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Edit product" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, textAlign: 'center', padding: 24, ...sans }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 15, textAlign: 'center', padding: 24, ...sans }}>
           {existing && existing.products.status !== 'pending' ? "This product has already been reviewed, so it can't be edited here." : "You can only edit products you've submitted yourself."}
         </div>
       </div>
@@ -291,13 +291,13 @@ export default function AddProduct() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, textAlign: 'center' }}>
           <div style={{ ...serif, fontSize: 17, color: '#e8e4dc' }}>{isEditing ? 'Changes saved' : 'Submitted for review'}</div>
           {!isEditing && (
-            <div style={{ fontSize: 13, color: '#888', ...sans, lineHeight: 1.6, maxWidth: 280 }}>
+            <div style={{ fontSize: 14, color: '#888', ...sans, lineHeight: 1.6, maxWidth: 280 }}>
               Thanks -- this product will show up in search once it's approved. Until then it's marked "Pending review" and only you can see it.
             </div>
           )}
           <button
             onClick={() => navigate(`/product/${done.id}`, { replace: true })}
-            style={{ background: '#f0ece4', color: '#111', borderRadius: 20, padding: '12px 24px', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif }}
+            style={{ background: '#f0ece4', color: '#111', borderRadius: 20, padding: '12px 24px', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif }}
           >
             {isEditing ? 'Back to product' : 'View product'}
           </button>
@@ -339,7 +339,7 @@ export default function AddProduct() {
         </Field>
 
         <div style={{ height: '0.5px', background: '#1e1e1e' }} />
-        <div style={{ fontSize: 10, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>This variant</div>
+        <div style={{ fontSize: 11, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>This variant</div>
 
         <Field label="Flavor (optional)">
           <input value={flavor} onChange={(e) => setFlavor(e.target.value)} placeholder="e.g. Peach Vibe" style={inputStyle} />
@@ -349,7 +349,7 @@ export default function AddProduct() {
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           <button
             onClick={() => fileInputRef.current?.click()}
-            style={{ background: 'none', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#ccc', cursor: 'pointer', textAlign: 'left', ...sans }}
+            style={{ background: 'none', border: '0.5px solid #2a2a2a', borderRadius: 8, padding: '10px 14px', fontSize: 14, color: '#ccc', cursor: 'pointer', textAlign: 'left', ...sans }}
           >
             {imageFile ? imageFile.name : imagePreview ? 'Choose a different photo' : 'Choose photo'}
           </button>
@@ -359,7 +359,7 @@ export default function AddProduct() {
           <>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
               <img src={imagePreview} alt="" style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover' }} />
-              <button onClick={handleRemoveImage} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#ff6b6b', ...sans, padding: 0 }}>
+              <button onClick={handleRemoveImage} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ff6b6b', ...sans, padding: 0 }}>
                 Remove photo
               </button>
             </div>
@@ -425,7 +425,7 @@ export default function AddProduct() {
           <textarea value={ingredientsText} onChange={(e) => setIngredientsText(e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
         </Field>
 
-        {error && <div style={{ fontSize: 12, color: '#ff6b6b', ...sans }}>{error}</div>}
+        {error && <div style={{ fontSize: 13, color: '#ff6b6b', ...sans }}>{error}</div>}
 
         <button
           onClick={handleSubmit}
@@ -435,7 +435,7 @@ export default function AddProduct() {
             color: '#111',
             borderRadius: 20,
             padding: '14px 0',
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: 500,
             border: 'none',
             cursor: submitting ? 'default' : 'pointer',
