@@ -1,15 +1,21 @@
 // Downloads each sourced official-brand product photo, crops/pads it to a
 // consistent square (matching compressImage's 800px convention used
-// elsewhere for uploaded images), re-encodes as webp, and uploads it to the
-// product-images bucket -- so photos sourced from many different brands'
-// own sites at least display uniformly framed in the app, even though the
-// underlying photography still varies brand to brand (see conversation).
+// elsewhere for uploaded images) on a transparent background, re-encodes as
+// webp, and uploads it to the product-images bucket -- so photos sourced
+// from many different brands' own sites at least display uniformly framed
+// in the app (blending into the dark UI instead of showing a colored
+// backing square), even though the underlying photography still varies
+// brand to brand (see conversation).
 //
 // Input: scripts/data/new-catalog-template.csv (the hand-filled catalog)
 //        scripts/data/photo-sources.json (brand|product_name|flavor -> source image URL,
 //        populated from web research -- see scripts/data/photo-sources.example.json)
 // Output: scripts/data/new-catalog-with-photos.csv (same rows, photo_url filled in
 //         wherever a source was found and processed successfully)
+//
+// Pass --force to reprocess every row with a source, even ones that already
+// have a photo_url -- used once to re-render the existing catalog's photos
+// onto a transparent background instead of the original white one.
 import dotenv from 'dotenv'
 import fs from 'fs'
 import path from 'path'
@@ -46,12 +52,13 @@ async function downloadImage(url) {
 
 async function processToSquareWebp(buffer) {
   return sharp(buffer)
-    .resize(OUTPUT_SIZE, OUTPUT_SIZE, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+    .resize(OUTPUT_SIZE, OUTPUT_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .webp({ quality: 85 })
     .toBuffer()
 }
 
 async function main() {
+  const force = process.argv.includes('--force')
   const csvPath = path.join(__dirname, 'data', 'new-catalog-template.csv')
   const sourcesPath = path.join(__dirname, 'data', 'photo-sources.json')
 
@@ -63,7 +70,7 @@ async function main() {
   let failed = 0
 
   for (const row of rows) {
-    if (row.photo_url && row.photo_url.trim()) continue // already has one, don't reprocess
+    if (!force && row.photo_url && row.photo_url.trim()) continue // already has one, don't reprocess
 
     const key = photoKey(row)
     const sourceUrl = sources[key]
