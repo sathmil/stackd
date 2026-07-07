@@ -2,7 +2,7 @@ import { scoreStyle } from '../utils/scoreStyle'
 import { colorHash } from '../utils/colorHash'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 const AVATAR_STYLE = {
   coral: { background: '#2a1010', color: '#ff6b6b' },
@@ -53,7 +53,7 @@ export function ScorePill({ score, extraStyle }) {
         color: s.color,
         border: `0.5px solid ${s.border}`,
         borderRadius: 20,
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: 500,
         padding: '3px 10px',
         ...serif,
@@ -84,7 +84,7 @@ export function BottomNav({ active, onNavigate }) {
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px' }}
         >
           <span style={{ fontSize: 20, color: active === item.key ? '#f0ece4' : '#828282', lineHeight: 1 }}>{item.icon}</span>
-          <span style={{ fontSize: 9, ...sans, color: active === item.key ? '#f0ece4' : '#828282' }}>{item.label}</span>
+          <span style={{ fontSize: 10, ...sans, color: active === item.key ? '#f0ece4' : '#828282' }}>{item.label}</span>
         </button>
       ))}
     </div>
@@ -108,7 +108,7 @@ export function Divider() {
 }
 
 export function SectionLabel({ children }) {
-  return <span style={{ fontSize: 9, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>{children}</span>
+  return <span style={{ fontSize: 10, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>{children}</span>
 }
 
 export function Chip({ label, active, onClick }) {
@@ -118,7 +118,7 @@ export function Chip({ label, active, onClick }) {
       style={{
         borderRadius: 20,
         padding: '5px 13px',
-        fontSize: 11,
+        fontSize: 12,
         cursor: 'pointer',
         ...sans,
         whiteSpace: 'nowrap',
@@ -187,9 +187,9 @@ export function Skeleton({ variant = 'rows', count = 5 }) {
 export function ErrorState({ message = "Couldn't load this. Try again in a moment.", onRetry }) {
   return (
     <div style={{ textAlign: 'center', padding: '48px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-      <div style={{ color: '#ff6b6b', fontSize: 14, ...sans }}>{message}</div>
+      <div style={{ color: '#ff6b6b', fontSize: 15, ...sans }}>{message}</div>
       {onRetry && (
-        <button onClick={onRetry} style={{ background: 'none', border: '0.5px solid #3a1a1a', borderRadius: 20, padding: '8px 18px', fontSize: 12, color: '#ff6b6b', cursor: 'pointer', ...sans }}>
+        <button onClick={onRetry} style={{ background: 'none', border: '0.5px solid #3a1a1a', borderRadius: 20, padding: '8px 18px', fontSize: 13, color: '#ff6b6b', cursor: 'pointer', ...sans }}>
           Try again
         </button>
       )}
@@ -207,7 +207,7 @@ export function NavBar({ title, onBack, rightEl }) {
       ) : (
         <div style={{ width: 28 }} />
       )}
-      <span style={{ ...{ fontFamily: 'Georgia, serif' }, fontSize: 15, color: '#e8e4dc' }}>{title}</span>
+      <span style={{ ...{ fontFamily: 'Georgia, serif' }, fontSize: 16, color: '#e8e4dc' }}>{title}</span>
       {rightEl || <div style={{ width: 28 }} />}
     </div>
   )

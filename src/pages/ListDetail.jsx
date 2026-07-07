@@ -6,7 +6,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchListById, fetchListItems, removeListItem, deleteList, updateListVisibility } from '../lib/api/lists'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 function formatCategory(raw) {
   return raw.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
@@ -86,7 +86,7 @@ export default function ListDetail() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="List" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, ...sans }}>List not found, or it's private.</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 15, ...sans }}>List not found, or it's private.</div>
       </div>
     )
   }
@@ -100,7 +100,7 @@ export default function ListDetail() {
         title={list.name}
         onBack={() => navigate(-1)}
         rightEl={
-          <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0 }}>
+          <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, padding: 0 }}>
             {copied ? 'Copied!' : 'Share'}
           </button>
         }
@@ -111,7 +111,7 @@ export default function ListDetail() {
           <>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: togglingVisibility ? 'default' : 'pointer' }}>
               <input type="checkbox" checked={list.is_public} disabled={togglingVisibility} onChange={handleToggleVisibility} />
-              <span style={{ fontSize: 12, color: '#888', ...sans }}>Public (anyone with the link can view it)</span>
+              <span style={{ fontSize: 13, color: '#888', ...sans }}>Public (anyone with the link can view it)</span>
             </label>
             <button
               onClick={() => navigate('/search')}
@@ -121,7 +121,7 @@ export default function ListDetail() {
                 border: '0.5px solid #2a2a2a',
                 borderRadius: 20,
                 padding: '8px 16px',
-                fontSize: 12,
+                fontSize: 13,
                 color: '#ccc',
                 cursor: 'pointer',
                 marginBottom: 4,
@@ -134,7 +134,7 @@ export default function ListDetail() {
         )}
 
         {items.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans }}>{isOwn ? 'Nothing here yet. Add products from their page.' : 'This list is empty.'}</div>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 15, ...sans }}>{isOwn ? 'Nothing here yet. Add products from their page.' : 'This list is empty.'}</div>
         )}
 
         {items.map((item, i) => {
@@ -142,13 +142,13 @@ export default function ListDetail() {
           const product = variant.products
           return (
             <div key={item.id} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ ...serif, fontSize: 13, color: '#828282', width: 16, flexShrink: 0 }}>{i + 1}</span>
+              <span style={{ ...serif, fontSize: 14, color: '#828282', width: 16, flexShrink: 0 }}>{i + 1}</span>
               <button onClick={() => navigate(`/product/${variant.id}`)} style={{ flex: 1, minWidth: 0, cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>
-                <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+                <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
                   {product.name}
                   {variant.flavor ? ` — ${variant.flavor}` : ''}
                 </div>
-                <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 2 }}>
                   {product.brand_name} · {formatCategory(product.category)}
                 </div>
               </button>
@@ -157,7 +157,7 @@ export default function ListDetail() {
                 <button
                   onClick={() => handleRemove(item.id)}
                   disabled={removingId === item.id}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#ff6b6b', ...sans, padding: 0, opacity: removingId === item.id ? 0.5 : 1, flexShrink: 0 }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#ff6b6b', ...sans, padding: 0, opacity: removingId === item.id ? 0.5 : 1, flexShrink: 0 }}
                 >
                   Remove
                 </button>
@@ -167,7 +167,7 @@ export default function ListDetail() {
         })}
 
         {isOwn && (
-          <button onClick={handleDeleteList} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#868686', ...sans, padding: '12px 0', marginTop: 8 }}>
+          <button onClick={handleDeleteList} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#868686', ...sans, padding: '12px 0', marginTop: 8 }}>
             Delete list
           </button>
         )}

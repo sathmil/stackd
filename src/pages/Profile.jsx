@@ -11,14 +11,14 @@ import AvatarCropModal from '../components/AvatarCropModal'
 import { timeAgo } from '../utils/timeAgo'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 const inputStyle = {
   background: '#1a1a1a',
   border: '0.5px solid #252525',
   borderRadius: 8,
   padding: '10px 12px',
-  fontSize: 13,
+  fontSize: 14,
   color: '#ccc',
   outline: 'none',
   width: '100%',
@@ -176,7 +176,7 @@ export default function Profile() {
   }
 
   if (!data) {
-    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, ...sans }}>Profile not found.</div>
+    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 15, ...sans }}>Profile not found.</div>
   }
 
   const { profile, stats, reviews, lists } = data
@@ -187,15 +187,15 @@ export default function Profile() {
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
         <div style={{ width: 60 }}>
           {isOwn && (
-            <button onClick={() => setEditing((e) => !e)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0 }}>
+            <button onClick={() => setEditing((e) => !e)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, padding: 0 }}>
               {editing ? 'Cancel' : 'Edit'}
             </button>
           )}
         </div>
-        <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>Profile</span>
+        <span style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>Profile</span>
         <div style={{ width: 60, textAlign: 'right' }}>
           {isOwn && (
-            <button onClick={handleSignOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#8f8f8f', ...sans, padding: 0 }}>
+            <button onClick={handleSignOut} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#8f8f8f', ...sans, padding: 0 }}>
               Sign out
             </button>
           )}
@@ -219,7 +219,7 @@ export default function Profile() {
                   border: '0.5px solid #2a2a2a',
                   borderRadius: 20,
                   padding: '8px 16px',
-                  fontSize: 12,
+                  fontSize: 13,
                   color: '#ccc',
                   cursor: uploadingAvatar ? 'default' : 'pointer',
                   opacity: uploadingAvatar ? 0.5 : 1,
@@ -237,7 +237,7 @@ export default function Profile() {
                 ))}
               </datalist>
               <input value={editGoal} onChange={(e) => setEditGoal(e.target.value)} placeholder="Goal, e.g. Health-conscious (optional)" style={inputStyle} />
-              {profileError && <div style={{ fontSize: 12, color: '#ff6b6b', ...sans }}>{profileError}</div>}
+              {profileError && <div style={{ fontSize: 13, color: '#ff6b6b', ...sans }}>{profileError}</div>}
               <button
                 onClick={handleSaveProfile}
                 disabled={savingProfile}
@@ -246,7 +246,7 @@ export default function Profile() {
                   color: '#111',
                   borderRadius: 20,
                   padding: '10px 0',
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 500,
                   border: 'none',
                   cursor: savingProfile ? 'default' : 'pointer',
@@ -260,9 +260,9 @@ export default function Profile() {
           ) : (
             <>
               <div style={{ ...serif, fontSize: 20, color: '#f0ece4', letterSpacing: '-0.01em', marginTop: 4 }}>{profile.display_name || profile.username}</div>
-              {profile.display_name && <div style={{ fontSize: 12, color: '#868686', ...sans }}>@{profile.username}</div>}
+              {profile.display_name && <div style={{ fontSize: 13, color: '#868686', ...sans }}>@{profile.username}</div>}
               {(profile.goal || profile.location) && (
-                <div style={{ fontSize: 12, color: '#868686', ...sans }}>
+                <div style={{ fontSize: 13, color: '#868686', ...sans }}>
                   {profile.goal}
                   {profile.goal && profile.location ? ' · ' : ''}
                   {profile.location}
@@ -281,7 +281,7 @@ export default function Profile() {
           ].map((s, i) => (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 4px', borderLeft: i > 0 ? '0.5px solid #1e1e1e' : 'none' }}>
               <span style={{ ...serif, fontSize: 20, color: s.color || '#e8e4dc', letterSpacing: '-0.02em' }}>{s.val}</span>
-              <span style={{ fontSize: 9, color: '#828282', ...sans, marginTop: 2 }}>{s.label}</span>
+              <span style={{ fontSize: 10, color: '#828282', ...sans, marginTop: 2 }}>{s.label}</span>
             </div>
           ))}
         </div>
@@ -302,7 +302,7 @@ export default function Profile() {
                 borderBottom: tab === key ? '1.5px solid #e8e4dc' : 'none',
                 cursor: 'pointer',
                 padding: '11px 0',
-                fontSize: 12,
+                fontSize: 13,
                 ...sans,
                 color: tab === key ? '#e8e4dc' : '#828282',
                 fontWeight: tab === key ? 500 : 400,
@@ -316,7 +316,7 @@ export default function Profile() {
         <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {tab === 'reviews' &&
             (reviews.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#828282', fontSize: 14, ...sans }}>No reviews yet.</div>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#828282', fontSize: 15, ...sans }}>No reviews yet.</div>
             ) : (
               reviews.map((review) => {
                 const variant = review.product_variants
@@ -338,7 +338,7 @@ export default function Profile() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 13,
+                            fontSize: 14,
                             color: '#868686',
                             flexShrink: 0,
                             ...serif,
@@ -348,15 +348,15 @@ export default function Profile() {
                         </div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+                        <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
                           {product.name}
                           {variant.flavor ? ` — ${variant.flavor}` : ''}
                         </div>
-                        <div style={{ fontSize: 10, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</div>
+                        <div style={{ fontSize: 11, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</div>
                       </div>
                       <ScorePill score={review.overall_rating} />
                     </div>
-                    {review.notes && <div style={{ fontSize: 13, color: '#969696', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+                    {review.notes && <div style={{ fontSize: 14, color: '#969696', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
                   </Card>
                 )
               })
@@ -381,17 +381,17 @@ export default function Profile() {
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ ...serif, fontSize: 14, color: '#5ecfcf', letterSpacing: '-0.01em' }}>
+                    <div style={{ ...serif, fontSize: 15, color: '#5ecfcf', letterSpacing: '-0.01em' }}>
                       {isOwn ? 'My rated products' : `${profile.display_name || profile.username}'s rated products`}
                     </div>
-                    <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>Ranked automatically by rating</div>
+                    <div style={{ fontSize: 12, color: '#828282', ...sans, marginTop: 3 }}>Ranked automatically by rating</div>
                   </div>
                   <span style={{ color: '#828282', fontSize: 18 }}>›</span>
                 </button>
               )}
 
               {lists.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 0', color: '#828282', fontSize: 14, ...sans }}>{isOwn ? "You haven't made any lists yet." : 'No public lists yet.'}</div>
+                <div style={{ textAlign: 'center', padding: '32px 0', color: '#828282', fontSize: 15, ...sans }}>{isOwn ? "You haven't made any lists yet." : 'No public lists yet.'}</div>
               ) : (
                 lists.map((list) => (
                   <button
@@ -411,8 +411,8 @@ export default function Profile() {
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
-                      <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>
+                      <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
+                      <div style={{ fontSize: 12, color: '#828282', ...sans, marginTop: 3 }}>
                         {list.list_items?.[0]?.count || 0} product{(list.list_items?.[0]?.count || 0) !== 1 ? 's' : ''} · {list.is_public ? 'Public' : 'Private'}
                       </div>
                     </div>
@@ -428,14 +428,14 @@ export default function Profile() {
               <button
                 onClick={handleExportData}
                 disabled={exportingData}
-                style={{ background: 'none', border: 'none', cursor: exportingData ? 'default' : 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0, opacity: exportingData ? 0.5 : 1 }}
+                style={{ background: 'none', border: 'none', cursor: exportingData ? 'default' : 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, padding: 0, opacity: exportingData ? 0.5 : 1 }}
               >
                 {exportingData ? 'Preparing export...' : 'Export my data'}
               </button>
               <button
                 onClick={handleDeleteAccount}
                 disabled={deletingAccount}
-                style={{ background: 'none', border: 'none', cursor: deletingAccount ? 'default' : 'pointer', fontSize: 12, color: '#ff6b6b', ...sans, padding: 0, opacity: deletingAccount ? 0.5 : 1 }}
+                style={{ background: 'none', border: 'none', cursor: deletingAccount ? 'default' : 'pointer', fontSize: 13, color: '#ff6b6b', ...sans, padding: 0, opacity: deletingAccount ? 0.5 : 1 }}
               >
                 {deletingAccount ? 'Deleting account...' : 'Delete my account'}
               </button>
@@ -443,7 +443,7 @@ export default function Profile() {
           )}
 
           {isOwn && (
-            <div style={{ textAlign: 'center', fontSize: 10, color: '#828282', ...sans, padding: '4px 0 4px' }}>
+            <div style={{ textAlign: 'center', fontSize: 11, color: '#828282', ...sans, padding: '4px 0 4px' }}>
               <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}>
                 Terms
               </button>

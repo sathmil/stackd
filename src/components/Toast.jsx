@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef } from 'react'
 
 const ToastContext = createContext(null)
 
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 /**
  * Wraps the whole app (see App.jsx) so any page can call useToast() for
@@ -34,7 +34,7 @@ export function ToastProvider({ children }) {
             color: toast.type === 'error' ? '#ff6b6b' : '#e8e4dc',
             borderRadius: 20,
             padding: '10px 18px',
-            fontSize: 13,
+            fontSize: 14,
             ...sans,
             maxWidth: '85%',
             textAlign: 'center',

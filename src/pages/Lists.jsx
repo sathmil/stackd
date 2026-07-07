@@ -8,7 +8,7 @@ import { trackEvent } from '../lib/analytics'
 import { Skeleton, ErrorState } from '../components/ui'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 export default function Lists() {
   const navigate = useNavigate()
@@ -45,8 +45,8 @@ export default function Lists() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
-        <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>My lists</span>
-        <button onClick={() => setCreating((c) => !c)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, fontWeight: 500, padding: 0 }}>
+        <span style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>My lists</span>
+        <button onClick={() => setCreating((c) => !c)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#5ecfcf', ...sans, fontWeight: 500, padding: 0 }}>
           {creating ? 'Cancel' : '+ New list'}
         </button>
       </div>
@@ -59,11 +59,11 @@ export default function Lists() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="List name, e.g. My pre-workout stack"
-              style={{ background: '#1a1a1a', border: '0.5px solid #252525', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#ccc', outline: 'none', ...sans }}
+              style={{ background: '#1a1a1a', border: '0.5px solid #252525', borderRadius: 8, padding: '10px 12px', fontSize: 14, color: '#ccc', outline: 'none', ...sans }}
             />
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
-              <span style={{ fontSize: 12, color: '#888', ...sans }}>Public (anyone with the link can view it)</span>
+              <span style={{ fontSize: 13, color: '#888', ...sans }}>Public (anyone with the link can view it)</span>
             </label>
             <button
               onClick={handleCreate}
@@ -73,7 +73,7 @@ export default function Lists() {
                 color: '#111',
                 borderRadius: 20,
                 padding: '10px 0',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 500,
                 border: 'none',
                 cursor: submitting ? 'default' : 'pointer',
@@ -103,8 +103,8 @@ export default function Lists() {
             }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...serif, fontSize: 14, color: '#5ecfcf', letterSpacing: '-0.01em' }}>My rated products</div>
-              <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>Everything you've rated, ranked automatically</div>
+              <div style={{ ...serif, fontSize: 15, color: '#5ecfcf', letterSpacing: '-0.01em' }}>My rated products</div>
+              <div style={{ fontSize: 12, color: '#828282', ...sans, marginTop: 3 }}>Everything you've rated, ranked automatically</div>
             </div>
             <span style={{ color: '#828282', fontSize: 18 }}>›</span>
           </button>
@@ -115,7 +115,7 @@ export default function Lists() {
         {error && <ErrorState message="Couldn't load your lists. Try again in a moment." onRetry={refetch} />}
 
         {!loading && !error && lists?.length === 0 && !creating && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans }}>You haven't made any lists yet.</div>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 15, ...sans }}>You haven't made any lists yet.</div>
         )}
 
         {!loading &&
@@ -138,8 +138,8 @@ export default function Lists() {
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
-                <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>
+                <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{list.name}</div>
+                <div style={{ fontSize: 12, color: '#828282', ...sans, marginTop: 3 }}>
                   {list.list_items?.[0]?.count || 0} product{(list.list_items?.[0]?.count || 0) !== 1 ? 's' : ''} · {list.is_public ? 'Public' : 'Private'}
                 </div>
               </div>

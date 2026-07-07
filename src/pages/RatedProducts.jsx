@@ -5,7 +5,7 @@ import { useAsync } from '../hooks/useAsync'
 import { fetchProfileByUsername, fetchRatedProductsForUser } from '../lib/api/profiles'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 function formatCategory(raw) {
   return raw.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
@@ -65,7 +65,7 @@ export default function RatedProducts() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Rated products" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 14, ...sans }}>Profile not found.</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 15, ...sans }}>Profile not found.</div>
       </div>
     )
   }
@@ -78,27 +78,27 @@ export default function RatedProducts() {
         title={`${profile.display_name || profile.username}'s rated products`}
         onBack={() => navigate(-1)}
         rightEl={
-          <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#5ecfcf', ...sans, padding: 0 }}>
+          <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, padding: 0 }}>
             {copied ? 'Copied!' : 'Share'}
           </button>
         }
       />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans }}>No rated products yet.</div>}
+        {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 15, ...sans }}>No rated products yet.</div>}
 
         {reviews.map((review, i) => {
           const variant = review.product_variants
           const product = variant.products
           return (
             <div key={review.id} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ ...serif, fontSize: 13, color: '#828282', width: 16, flexShrink: 0 }}>{i + 1}</span>
+              <span style={{ ...serif, fontSize: 14, color: '#828282', width: 16, flexShrink: 0 }}>{i + 1}</span>
               <button onClick={() => navigate(`/product/${variant.id}`)} style={{ flex: 1, minWidth: 0, cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>
-                <div style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+                <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
                   {product.name}
                   {variant.flavor ? ` — ${variant.flavor}` : ''}
                 </div>
-                <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 2 }}>
                   {product.brand_name} · {formatCategory(product.category)}
                 </div>
               </button>

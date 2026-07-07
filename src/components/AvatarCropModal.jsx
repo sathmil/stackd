@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Cropper from 'react-easy-crop'
 import { cropImageToBlob } from '../lib/storage'
 
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 
 /**
@@ -41,14 +41,14 @@ export default function AvatarCropModal({ file, onCancel, onCropped }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#111', display: 'flex', flexDirection: 'column', zIndex: 200 }}>
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
-        <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#8f8f8f', ...sans, padding: 0 }}>
+        <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#8f8f8f', ...sans, padding: 0 }}>
           Cancel
         </button>
-        <span style={{ ...serif, fontSize: 15, color: '#e8e4dc' }}>Adjust photo</span>
+        <span style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>Adjust photo</span>
         <button
           onClick={handleSave}
           disabled={saving || !croppedAreaPixels}
-          style={{ background: 'none', border: 'none', cursor: saving ? 'default' : 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, fontWeight: 500, padding: 0, opacity: saving ? 0.5 : 1 }}
+          style={{ background: 'none', border: 'none', cursor: saving ? 'default' : 'pointer', fontSize: 14, color: '#5ecfcf', ...sans, fontWeight: 500, padding: 0, opacity: saving ? 0.5 : 1 }}
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
@@ -71,9 +71,9 @@ export default function AvatarCropModal({ file, onCancel, onCropped }) {
       </div>
 
       <div style={{ padding: '16px 20px 24px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        <span style={{ fontSize: 16, color: '#8f8f8f' }}>−</span>
+        <span style={{ fontSize: 17, color: '#8f8f8f' }}>−</span>
         <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} style={{ flex: 1 }} aria-label="Zoom" />
-        <span style={{ fontSize: 16, color: '#8f8f8f' }}>+</span>
+        <span style={{ fontSize: 17, color: '#8f8f8f' }}>+</span>
       </div>
     </div>
   )

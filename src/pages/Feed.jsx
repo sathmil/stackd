@@ -6,7 +6,7 @@ import { timeAgo } from '../utils/timeAgo'
 import { trackEvent } from '../lib/analytics'
 
 const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }
+const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 const PAGE_SIZE = 15
 
@@ -27,17 +27,17 @@ function FeedCard({ review }) {
           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
         >
           <Avatar user={review.reviewer} size="sm" />
-          <span style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>{review.reviewer.username}</span>
-          <span style={{ marginLeft: 'auto', fontSize: 10, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</span>
+          <span style={{ fontSize: 15, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>{review.reviewer.username}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</span>
         </button>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>Unknown</span>
-          <span style={{ marginLeft: 'auto', fontSize: 10, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</span>
+          <span style={{ fontSize: 15, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>Unknown</span>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: '#828282', ...sans }}>{timeAgo(review.created_at)}</span>
         </div>
       )}
 
-      <span style={{ fontSize: 12, color: '#868686', ...sans }}>rated a product</span>
+      <span style={{ fontSize: 13, color: '#868686', ...sans }}>rated a product</span>
 
       <button
         onClick={() => navigate(`/product/${variant.id}`)}
@@ -56,7 +56,7 @@ function FeedCard({ review }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 15,
+              fontSize: 16,
               color: '#868686',
               flexShrink: 0,
               ...serif,
@@ -66,23 +66,23 @@ function FeedCard({ review }) {
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>
+          <div style={{ fontSize: 15, color: '#e8e4dc', ...serif, letterSpacing: '-0.01em' }}>
             {product.name}
             {variant.flavor ? ` — ${variant.flavor}` : ''}
           </div>
-          <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 1 }}>
+          <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 1 }}>
             {product.brand_name} · {formatCategory(product.category)}
           </div>
         </div>
         <ScorePill score={review.overall_rating} />
       </button>
 
-      {review.notes && <div style={{ fontSize: 13, color: '#969696', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+      {review.notes && <div style={{ fontSize: 14, color: '#969696', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
 
       {review.tags.length > 0 && (
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {review.tags.map((tag) => (
-            <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#868686', ...sans }}>
+            <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 11, color: '#868686', ...sans }}>
               {tag.label}
             </span>
           ))}
@@ -163,7 +163,7 @@ export default function Feed() {
         {error && <ErrorState message="Couldn't load the feed. Try again in a moment." onRetry={() => loadPage(0, true)} />}
 
         {!loading && !error && reviews.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 14, ...sans }}>No activity yet. Be the first to rate something.</div>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 15, ...sans }}>No activity yet. Be the first to rate something.</div>
         )}
 
         {reviews.map((review) => (
@@ -174,7 +174,7 @@ export default function Feed() {
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            style={{ background: 'none', border: '0.5px solid #222', borderRadius: 20, padding: '10px 0', fontSize: 13, color: '#888', cursor: 'pointer', ...sans, marginTop: 4 }}
+            style={{ background: 'none', border: '0.5px solid #222', borderRadius: 20, padding: '10px 0', fontSize: 14, color: '#888', cursor: 'pointer', ...sans, marginTop: 4 }}
           >
             {loadingMore ? 'Loading...' : 'Load more'}
           </button>
