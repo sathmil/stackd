@@ -10,11 +10,11 @@ const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
 const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
 
 const CATEGORY_DB_VALUES = {
-  Energy: ['energy_drink'],
-  Protein: ['protein_bar', 'protein_powder'],
+  Drinks: ['energy_drink', 'protein_shake'],
+  Protein: ['protein_powder'],
   Supps: ['supplement', 'pre_workout'],
   Greens: ['greens_powder'],
-  Snacks: ['snack'],
+  Food: ['snack', 'protein_bar'],
 }
 
 const SORTS = [

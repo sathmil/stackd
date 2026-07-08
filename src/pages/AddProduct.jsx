@@ -24,6 +24,7 @@ const CATEGORIES = [
   ['energy_drink', 'Energy drink'],
   ['protein_bar', 'Protein bar'],
   ['protein_powder', 'Protein powder'],
+  ['protein_shake', 'Protein shake (RTD)'],
   ['pre_workout', 'Pre-workout'],
   ['greens_powder', 'Greens powder'],
   ['supplement', 'Supplement'],
