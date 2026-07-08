@@ -33,6 +33,19 @@ doesn't happen again silently.
 - Title Case, English only.
 - Same normalized-key dedup check as brands, scoped to `(brand_id, name)`.
 
+## Category
+
+- `products.category` is one of: `energy_drink`, `protein_bar`, `protein_powder`,
+  `protein_shake`, `pre_workout`, `greens_powder`, `supplement`, `snack`, `other`.
+- `protein_shake` is specifically ready-to-drink (RTD) shakes (bottles/cans),
+  not scoop-and-mix tubs — those are `protein_powder`. The distinction matters
+  because Search groups `protein_shake` under "Drinks" alongside energy
+  drinks, and `protein_powder` under "Protein" alongside powder tubs.
+- This DB category is separate from Search's chip groupings (`Drinks`,
+  `Protein`, `Supps`, `Greens`, `Food`, see `CATEGORY_DB_VALUES` in
+  `Search.jsx`) — a chip can span multiple DB categories (e.g. "Food" =
+  `snack` + `protein_bar`), but each product only has one DB category.
+
 ## Variant (flavor/size)
 
 - Title Case flavor names ("Double Rich Chocolate", not "double rich chocolate").
