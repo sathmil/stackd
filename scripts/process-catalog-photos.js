@@ -20,6 +20,7 @@ import dotenv from 'dotenv'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { execFileSync } from 'child_process'
 import { parse } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify/sync'
 import sharp from 'sharp'
@@ -45,9 +46,19 @@ function photoKey(row) {
 }
 
 async function downloadImage(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } })
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`)
-  return Buffer.from(await res.arrayBuffer())
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } })
+    if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`)
+    return Buffer.from(await res.arrayBuffer())
+  } catch (err) {
+    // Some sites (e.g. usa.fage) serve a cert chain the macOS system trust
+    // store tolerates but Node's own bundled CA store rejects
+    // (UNABLE_TO_VERIFY_LEAF_SIGNATURE). Rather than weakening TLS
+    // verification for every fetch in this script, fall back to curl --
+    // which uses the OS trust store -- only for this specific failure mode.
+    if (err.cause?.code !== 'UNABLE_TO_VERIFY_LEAF_SIGNATURE') throw err
+    return execFileSync('curl', ['-sL', '-A', USER_AGENT, url], { maxBuffer: 1024 * 1024 * 20 })
+  }
 }
 
 async function processToSquareWebp(buffer) {
