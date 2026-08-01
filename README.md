@@ -1,49 +1,39 @@
 # Stackd
 
-Stackd is a review and discovery app for functional food and supplement products: energy drinks, protein bars, protein powders, pre-workouts, greens powders, and similar products. Think of it as a lightweight product-review network for what fuels you.
+Social discovery and rating platform for health products — think Letterboxd or Beli, for supplements, protein snacks, and energy drinks.
 
-Live app: https://www.getstackd.app/
+Stackd lets people rate, review, and discover health products through structured, multi-dimensional scores and a social graph that surfaces what friends actually like — instead of relying on brand marketing or generic star ratings.
 
-## What it does
+**Live:** [getstackd.app](https://getstackd.app)
 
-- Browse and search a product catalog by name, brand, category, rating, popularity, or recency.
-- View product pages with aggregate scores, nutrition details, ingredient context, and user reviews.
-- Rate products on taste and value/effectiveness, mark whether you would buy again, and add notes or tags.
-- Save products into ranked public or private lists.
-- Submit missing products to the catalog for review.
-- Manage account profile, avatar, rated products, password recovery, and account deletion flows.
+## Why
 
-## Tech stack
+Health product reviews online are fragmented across Amazon, Reddit, and influencer content, and rarely capture what actually matters to a specific person — taste, ingredient quality, effectiveness, and value can each vary independently. Stackd separates products by variant (e.g., each flavor of an energy drink is scored independently) and lets social trust, not advertising, drive discovery.
 
-- React 19 + Vite
-- React Router
-- Supabase Auth, Postgres, Storage, and Row Level Security
-- Tailwind CSS
-- Vitest
-- Oxlint and Prettier
+## Features
 
-## Architecture notes
+- **Multi-dimensional rating system** — Taste, Effectiveness, Ingredient Quality, and Value scored independently on a 1–10 decimal scale
+- **Independent product variants** — each flavor/SKU is its own entry with its own scores, not grouped under a parent product
+- **Social graph** — friends' ratings surface first, so recommendations come from people you trust
+- **Creator Pick badges** — algorithmically awarded based on community consensus
+- **Product search & filtering** — fast, responsive discovery across the catalog
 
-The app keeps data access behind `src/lib/api/*`; pages and components do not talk to Supabase directly. Supabase Auth handles sessions, Postgres and RLS enforce data access, and SQL views provide aggregate product ratings.
+## Tech Stack
 
-See `docs/product.md` and `docs/architecture.md` for the fuller product and system design notes.
+- **Frontend:** React, TypeScript
+- **Backend/Data:** Supabase (Postgres, Auth, Row-Level Security)
+- **Hosting:** Vercel
 
-## Local development
+## Architecture
 
-```bash
-npm install
-npm run dev
-```
+- PostgreSQL schema modeling users, product variants, reviews, and social relationships as first-class, independently queryable entities
+- Supabase Auth for user management
+- Row-level security policies enforcing per-user data access at the database layer
+- React/TypeScript frontend for search, filtering, scoring, and social feed views
 
-Useful commands:
 
-```bash
-npm run build
-npm run lint
-npm run test
-npm run format
-```
+## Roadmap
 
-## Project status
-
-Stackd is an active product build. The current implementation focuses on catalog discovery, reviewing, lists, auth, profile management, and the core Supabase-backed data model.
+- Affiliate links for monetization
+- Brand analytics dashboards
+- React Native mobile app (post-web-MVP validation)
