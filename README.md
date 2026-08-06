@@ -1,39 +1,42 @@
 # Stackd
 
-Social discovery and rating platform for health products — think Letterboxd or Beli, for supplements, protein snacks, and energy drinks.
+Social discovery and rating platform for health products — think Letterboxd or Beli, for supplements, protein bars, and energy drinks.
 
-Stackd lets people rate, review, and discover health products through structured, multi-dimensional scores and a social graph that surfaces what friends actually like — instead of relying on brand marketing or generic star ratings.
+Stackd lets people rate, review, and discover health products with an AI-computed ingredient-quality score alongside their own rating — instead of relying on brand marketing, sponsored content, or a star rating with no read on what's actually in the product.
 
 **Live:** [getstackd.app](https://getstackd.app)
 
 ## Why
 
-Health product reviews online are fragmented across Amazon, Reddit, and influencer content, and rarely capture what actually matters to a specific person — taste, ingredient quality, effectiveness, and value can each vary independently. Stackd separates products by variant (e.g., each flavor of an energy drink is scored independently) and lets social trust, not advertising, drive discovery.
+Health product reviews online are fragmented across Amazon, Reddit, TikTok, and influencer content, and rarely answer the actual question: is this good, and what's in it? Stackd separates products by variant (each flavor/size is scored independently, not lumped under one parent listing) and pairs a real person's own rating with an AI-generated read on ingredient quality, so ingredient quality isn't left to a guess.
 
 ## Features
 
-- **Multi-dimensional rating system** — Taste, Effectiveness, Ingredient Quality, and Value scored independently on a 1–10 decimal scale
-- **Independent product variants** — each flavor/SKU is its own entry with its own scores, not grouped under a parent product
-- **Social graph** — friends' ratings surface first, so recommendations come from people you trust
-- **Creator Pick badges** — algorithmically awarded based on community consensus
-- **Product search & filtering** — fast, responsive discovery across the catalog
+- **AI-powered ingredient analysis** — an LLM reads each product's ingredient list and produces a 1–10 quality score plus a plain-language summary, computed once per product and shown as objective info alongside personal ratings, not blended into them
+- **Independent product variants** — each flavor/size is its own rateable entry with its own score, not grouped under a parent product
+- **Ranked, shareable lists** — build a ranked list of favorites and share it with a single public link
+- **Community ratings & activity feed** — a global feed of real ratings and aggregate scores across the catalog
+- **Product search & filtering** — category-based browsing and full-text search across the catalog
 
 ## Tech Stack
 
-- **Frontend:** React, TypeScript
-- **Backend/Data:** Supabase (Postgres, Auth, Row-Level Security)
+- **Frontend:** React (Vite), JavaScript with JSDoc type annotations
+- **Backend/Data:** Supabase (Postgres, Auth, Row-Level Security, Storage, Edge Functions)
+- **AI:** OpenAI, called from a Supabase Edge Function for ingredient analysis
 - **Hosting:** Vercel
 
 ## Architecture
 
-- PostgreSQL schema modeling users, product variants, reviews, and social relationships as first-class, independently queryable entities
-- Supabase Auth for user management
+- PostgreSQL schema modeling products as a product/variant hierarchy (one brand, many flavors/sizes), with reviews and lists as first-class, independently queryable entities
 - Row-level security policies enforcing per-user data access at the database layer
-- React/TypeScript frontend for search, filtering, scoring, and social feed views
-
+- Supabase Auth for user management, including a Proofpoint-safe password-reset flow (token exchanged client-side, not via a server-side link a security scanner can pre-consume)
+- Feature-flag kill-switches for AI analysis and product submission, flippable without a deploy
+- 432 rateable product variants across 24 brands, each with real nutrition facts, ingredient lists, and photos sourced directly from official brand sites
 
 ## Roadmap
 
+- Follow graph / friend-based discovery (ratings are currently aggregate/community-wide, not social-graph-filtered)
+- Barcode/camera scanning for adding products
 - Affiliate links for monetization
 - Brand analytics dashboards
-- React Native mobile app (post-web-MVP validation)
+- Native iOS/Android app (post-web-MVP validation)
