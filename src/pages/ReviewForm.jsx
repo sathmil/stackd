@@ -1,29 +1,62 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Divider, Skeleton, ErrorState } from '../components/ui'
+import { X, CheckCircle2, Plus } from 'lucide-react'
+import { Skeleton, ErrorState } from '../components/ui'
 import { useToast } from '../components/Toast'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById } from '../lib/api/products'
-import { fetchActiveTags, fetchOwnReview, upsertReview, syncReviewTags, deleteReview } from '../lib/api/reviews'
+import { fetchActiveTags, fetchOwnReview, upsertReview, syncReviewTags, deleteReview, createTag } from '../lib/api/reviews'
+import { fetchReviewsForUser } from '../lib/api/profiles'
 import { trackEvent } from '../lib/analytics'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 
-const RATING_COLOR = '#5ecfcf'
+// Two color choices per sentiment (positive: green/blue, negative:
+// pink/gold) so tag chips read as varied and lively rather than a strict
+// two-color split, while staying true to the tag's actual sentiment.
+const POSITIVE_COLORS = [
+  ['var(--color-effect)', 'var(--color-effect-bg)', 'var(--color-effect-border)'],
+  ['var(--color-value)', 'var(--color-value-bg)', 'var(--color-value-border)'],
+]
+const NEGATIVE_COLORS = [
+  ['var(--color-taste)', 'var(--color-taste-bg)', 'var(--color-taste-border)'],
+  ['var(--tier-gold)', 'var(--tier-gold-bg)', 'var(--tier-gold-border)'],
+]
 
-function Slider({ label, value, onChange }) {
+function hashIndex(id, mod) {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return h % mod
+}
+
+function tagColors(tag) {
+  const palette = tag.sentiment === 'positive' ? POSITIVE_COLORS : NEGATIVE_COLORS
+  return palette[hashIndex(tag.id, palette.length)]
+}
+
+const DIMENSIONS = [
+  { key: 'taste', label: 'Taste', question: 'How enjoyable was it?', lo: 'Chalky', hi: 'Delicious', color: 'var(--color-taste)' },
+  { key: 'value', label: 'Value', question: 'Worth the price?', lo: 'Overpriced', hi: 'Steal', color: 'var(--color-value)' },
+  { key: 'effectiveness', label: 'Effectiveness', question: 'Did it deliver results?', lo: 'Placebo', hi: 'Game Changer', color: 'var(--color-effect)' },
+]
+
+function Slider({ dimension, value, onChange }) {
   const pct = ((value - 1) / 9) * 100
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 14, color: '#969696', ...sans }}>{label}</span>
-        <span style={{ ...serif, fontSize: 15, color: RATING_COLOR }}>{value.toFixed(1)}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 14, padding: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div>
+          <div style={{ ...serif, fontSize: 17, color: 'var(--text-heading)' }}>{dimension.label}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', ...sans }}>{dimension.question}</div>
+        </div>
+        <span style={{ ...serif, fontSize: 20, color: dimension.color, letterSpacing: '-0.02em' }}>{value.toFixed(1)}</span>
       </div>
-      <div style={{ position: 'relative', height: 22, display: 'flex', alignItems: 'center' }}>
-        <div style={{ position: 'absolute', left: 0, right: 0, height: 3, background: '#1e1e1e', borderRadius: 2 }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: RATING_COLOR, borderRadius: 2 }} />
+      <div style={{ position: 'relative', height: 22, display: 'flex', alignItems: 'center', marginTop: 4 }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, height: 5, background: 'var(--border-subtle)', borderRadius: 3 }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: dimension.color, borderRadius: 3 }} />
         </div>
         <input
           type="range"
@@ -39,14 +72,51 @@ function Slider({ label, value, onChange }) {
             position: 'absolute',
             left: `${pct}%`,
             transform: 'translateX(-50%)',
-            width: 15,
-            height: 15,
+            width: 16,
+            height: 16,
             borderRadius: '50%',
-            background: '#111',
-            border: `2px solid ${RATING_COLOR}`,
+            background: dimension.color,
             pointerEvents: 'none',
           }}
         />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', ...sans }}>{dimension.lo}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', ...sans }}>{dimension.hi}</span>
+      </div>
+    </div>
+  )
+}
+
+function CompareChart({ bars }) {
+  if (bars.length < 2) return null
+  const max = Math.max(10, ...bars.map((b) => b.value))
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div>
+        <div style={{ ...serif, fontSize: 16, color: 'var(--text-primary)' }}>Compare to your stack</div>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', ...sans, marginTop: 2 }}>See how this stacks up against your previously rated products in this category.</div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 90, padding: '0 4px' }}>
+        {bars.map((bar, i) => (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+            {bar.current && (
+              <span style={{ fontSize: 10, color: 'var(--color-taste)', ...sans, whiteSpace: 'nowrap' }}>
+                {bar.label} ({bar.value.toFixed(1)})
+              </span>
+            )}
+            <div
+              style={{
+                width: '100%',
+                maxWidth: 34,
+                height: `${(bar.value / max) * 100}%`,
+                minHeight: 4,
+                borderRadius: '4px 4px 0 0',
+                background: bar.current ? 'var(--color-taste)' : 'var(--border-strong)',
+              }}
+            />
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -57,6 +127,7 @@ export default function ReviewForm() {
   const navigate = useNavigate()
   const user = useCurrentUser()
   const showToast = useToast()
+  const confirm = useConfirm()
   // navigate(-1), not navigate(`/product/${variantId}`) -- this route is only
   // ever reached by pushing from the product page, so going back should pop
   // that entry rather than push a new one. Pushing here made the history
@@ -67,29 +138,64 @@ export default function ReviewForm() {
 
   const { data, loading, error, refetch } = useAsync(async () => {
     if (!user) return { data: null, error: null }
-    const [{ data: variant, error: vErr }, { data: tags }, { data: ownReview }] = await Promise.all([fetchVariantById(variantId), fetchActiveTags(), fetchOwnReview(variantId, user.id)])
+    const [{ data: variant, error: vErr }, { data: tags }, { data: ownReview }, { data: ownReviews }] = await Promise.all([
+      fetchVariantById(variantId),
+      fetchActiveTags(),
+      fetchOwnReview(variantId, user.id),
+      fetchReviewsForUser(user.id),
+    ])
     if (vErr) return { data: null, error: vErr }
-    return { data: { variant, tags: tags || [], ownReview }, error: null }
+    return { data: { variant, tags: tags || [], ownReview, ownReviews: ownReviews || [] }, error: null }
   }, [variantId, user])
 
-  const [overallRating, setOverallRating] = useState(6.0)
+  const [taste, setTaste] = useState(6.0)
+  const [value, setValueRating] = useState(6.0)
+  const [effectiveness, setEffectiveness] = useState(6.0)
   const [wouldBuyAgain, setWouldBuyAgain] = useState(null)
   const [notes, setNotes] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [done, setDone] = useState(false)
+  const [localTags, setLocalTags] = useState(null)
+  const [addingTag, setAddingTag] = useState(false)
+  const [newTagLabel, setNewTagLabel] = useState('')
+  const [creatingTag, setCreatingTag] = useState(false)
+
+  useEffect(() => {
+    if (data?.tags) setLocalTags(data.tags)
+  }, [data?.tags])
 
   useEffect(() => {
     if (!data?.ownReview) return
     const r = data.ownReview
-    setOverallRating(Number(r.overall_rating))
+    setTaste(Number(r.taste_rating))
+    setValueRating(Number(r.value_rating))
+    setEffectiveness(Number(r.effectiveness_rating))
     setWouldBuyAgain(r.would_buy_again)
     setNotes(r.notes || '')
     setSelectedTagIds(r.review_tags.map((rt) => rt.tag_id))
   }, [data?.ownReview])
 
   const toggleTag = (tagId) => setSelectedTagIds((t) => (t.includes(tagId) ? t.filter((x) => x !== tagId) : [...t, tagId]))
+
+  const handleCreateTag = async () => {
+    if (!newTagLabel.trim()) {
+      setAddingTag(false)
+      return
+    }
+    setCreatingTag(true)
+    const { data: tag, error } = await createTag(newTagLabel)
+    setCreatingTag(false)
+    if (error || !tag) {
+      showToast("Couldn't add that tag. Try again.", 'error')
+      return
+    }
+    setLocalTags((prev) => (prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]))
+    setSelectedTagIds((t) => (t.includes(tag.id) ? t : [...t, tag.id]))
+    setNewTagLabel('')
+    setAddingTag(false)
+  }
 
   const handleSubmit = async () => {
     setSubmitting(true)
@@ -100,7 +206,9 @@ export default function ReviewForm() {
     const { data: review, error } = await upsertReview({
       variantId,
       userId: user.id,
-      overallRating,
+      tasteRating: taste,
+      valueRating: value,
+      effectivenessRating: effectiveness,
       wouldBuyAgain,
       notes,
     })
@@ -115,7 +223,7 @@ export default function ReviewForm() {
   }
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete your review? This cannot be undone.')) return
+    if (!(await confirm('This cannot be undone.', { title: 'Delete your review?', confirmLabel: 'Delete Review' }))) return
     setDeleting(true)
     await deleteReview(data.ownReview.id)
     setDeleting(false)
@@ -130,18 +238,53 @@ export default function ReviewForm() {
     return <ErrorState message="Couldn't load this product. Try again in a moment." onRetry={refetch} />
   }
 
-  const { variant, tags } = data
+  const { variant, ownReviews } = data
+  const tags = localTags || data.tags
   const product = variant.products
   const isEditing = !!data.ownReview
-  const positiveTags = tags.filter((t) => t.sentiment === 'positive')
-  const negativeTags = tags.filter((t) => t.sentiment === 'negative')
+
+  const overallRating = Math.round(((taste + value + effectiveness) / 3) * 10) / 10
+  const priorInCategory = ownReviews
+    .filter((r) => r.variant_id !== variantId && r.product_variants?.products?.category === product.category)
+    .slice(0, 3)
+    .reverse()
+  const compareBars = [...priorInCategory.map((r) => ({ label: r.product_variants.products.name, value: Number(r.overall_rating) })), { label: product.name, value: overallRating, current: true }]
 
   if (done) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#111' }}>
-        <div style={{ ...serif, fontSize: 20, color: '#e8e4dc' }}>{isEditing ? 'Review updated!' : 'Review posted!'}</div>
-        <div style={{ fontSize: 14, color: '#8f8f8f', ...sans }}>Thanks for rating {product.name}</div>
-        <button onClick={goBack} style={{ marginTop: 16, background: '#f0ece4', color: '#111', border: 'none', borderRadius: 20, padding: '11px 28px', fontSize: 15, cursor: 'pointer', ...serif }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: 'var(--bg-nav)', padding: '0 24px' }}>
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            background: 'var(--color-effect-bg)',
+            border: '1px solid var(--color-effect-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <CheckCircle2 size={34} color="var(--color-effect)" strokeWidth={2} />
+        </div>
+        <div style={{ ...serif, fontWeight: 700, fontSize: 24, color: 'var(--text-heading)', textAlign: 'center', letterSpacing: '-0.01em' }}>{isEditing ? 'Review updated!' : 'Review posted!'}</div>
+        <div style={{ fontSize: 14, color: 'var(--text-muted)', ...sans, textAlign: 'center' }}>Thanks for rating {product.name}</div>
+        <button
+          onClick={goBack}
+          className="stackd-press"
+          style={{
+            marginTop: 16,
+            background: 'var(--text-heading)',
+            color: 'var(--bg-nav)',
+            border: 'none',
+            borderRadius: 20,
+            padding: '13px 30px',
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: 'pointer',
+            ...serif,
+          }}
+        >
           Back to product
         </button>
       </div>
@@ -151,178 +294,212 @@ export default function ReviewForm() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Nav */}
-      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
-        <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#8f8f8f', ...sans, padding: 0 }}>
-          Cancel
-        </button>
-        <span style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>{isEditing ? 'Edit rating' : 'Rate it'}</span>
+      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid var(--border-subtle)', flexShrink: 0 }}>
         <button
-          onClick={handleSubmit}
-          disabled={submitting}
+          onClick={goBack}
+          className="stackd-press"
           style={{
-            background: 'none',
-            border: 'none',
-            cursor: submitting ? 'default' : 'pointer',
-            fontSize: 14,
-            color: '#5ecfcf',
-            ...sans,
-            fontWeight: 500,
-            padding: 0,
-            opacity: submitting ? 0.5 : 1,
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'var(--bg-subtle)',
+            border: '0.5px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: 'var(--text-primary)',
+            flexShrink: 0,
           }}
         >
-          {isEditing ? 'Save' : 'Post'}
+          <X size={16} strokeWidth={2.25} />
         </button>
+        <span style={{ ...serif, fontWeight: 700, fontSize: 17, color: 'var(--text-heading)', letterSpacing: '-0.01em' }}>Stackd</span>
+        <div style={{ width: 32 }} />
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Product */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: '#1a1a1a',
-              border: '0.5px solid #222',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 16,
-              color: '#868686',
-              flexShrink: 0,
-              ...serif,
-            }}
-          >
-            {product.name.charAt(0)}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div>
+          <div style={{ ...serif, fontSize: 26, color: 'var(--text-heading)', letterSpacing: '-0.01em' }}>Rate Your Stack</div>
+          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', ...sans, marginTop: 4, lineHeight: 1.5 }}>
+            How did this product perform? Your review helps the community discover better wellness.
           </div>
+        </div>
+
+        {/* Product */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 12, padding: 14 }}>
+          {variant.image_url ? (
+            <img src={variant.image_url} alt="" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'contain', flexShrink: 0 }} />
+          ) : (
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 8,
+                background: 'var(--bg-subtle)',
+                border: '0.5px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 24,
+                color: 'var(--text-tertiary)',
+                flexShrink: 0,
+                ...serif,
+              }}
+            >
+              {product.name.charAt(0)}
+            </div>
+          )}
           <div>
-            <div style={{ ...serif, fontSize: 16, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-quiet)', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>{product.category.replace(/_/g, ' ')}</div>
+            <div style={{ ...serif, fontSize: 16, color: 'var(--text-primary)', letterSpacing: '-0.01em', marginTop: 1 }}>
               {product.name}
               {variant.flavor ? ` — ${variant.flavor}` : ''}
             </div>
-            <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 2 }}>{product.brand_name}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', ...sans, marginTop: 1 }}>by {product.brand_name}</div>
           </div>
         </div>
 
-        <Divider />
-
-        {/* Rating */}
-        <Slider label="Overall rating" value={overallRating} onChange={setOverallRating} />
-
-        <Divider />
-
-        {/* Would buy again */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 14, color: '#969696', ...sans }}>Would you buy this again?</span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              ['Yes', true],
-              ['No', false],
-            ].map(([label, val]) => {
-              const on = wouldBuyAgain === val
-              return (
-                <button
-                  key={label}
-                  onClick={() => setWouldBuyAgain(on ? null : val)}
-                  style={{
-                    flex: 1,
-                    borderRadius: 20,
-                    padding: '9px 0',
-                    fontSize: 14,
-                    cursor: 'pointer',
-                    ...sans,
-                    background: on ? '#0d2020' : 'transparent',
-                    border: on ? '0.5px solid #1a3030' : '0.5px solid #222',
-                    color: on ? '#5ecfcf' : '#8f8f8f',
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Note */}
-        <textarea
-          placeholder="What stood out? Taste, effects, value — would you buy it again?"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '11px 13px', fontSize: 14, color: '#888', lineHeight: 1.6, outline: 'none', ...sans }}
-        />
-        <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: -10 }}>Share your experience — avoid medical claims.</div>
+        {/* Three rating dimensions */}
+        {DIMENSIONS.map((dim) => (
+          <Slider key={dim.key} dimension={dim} value={{ taste, value, effectiveness }[dim.key]} onChange={{ taste: setTaste, value: setValueRating, effectiveness: setEffectiveness }[dim.key]} />
+        ))}
 
         {/* Tags */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={{ ...serif, fontSize: 20, color: 'var(--text-heading)' }}>Quick Tags</span>
           <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-            {positiveTags.map((tag) => {
+            {tags.map((tag) => {
               const on = selectedTagIds.includes(tag.id)
+              const [color, bg] = tagColors(tag)
               return (
                 <button
                   key={tag.id}
                   onClick={() => toggleTag(tag.id)}
                   style={{
                     borderRadius: 20,
-                    padding: '5px 12px',
-                    fontSize: 13,
+                    padding: '8px 16px',
+                    fontSize: 14,
                     cursor: 'pointer',
                     ...sans,
-                    background: on ? '#0d2020' : 'transparent',
-                    border: on ? '0.5px solid #1a3030' : '0.5px solid #222',
-                    color: on ? '#5ecfcf' : '#8f8f8f',
+                    fontWeight: 700,
+                    background: on ? bg : 'var(--bg-subtle)',
+                    border: 'none',
+                    color: on ? color : 'var(--text-quiet)',
                   }}
                 >
                   {tag.label}
                 </button>
               )
             })}
-          </div>
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-            {negativeTags.map((tag) => {
-              const on = selectedTagIds.includes(tag.id)
-              return (
-                <button
-                  key={tag.id}
-                  onClick={() => toggleTag(tag.id)}
-                  style={{
-                    borderRadius: 20,
-                    padding: '5px 12px',
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    ...sans,
-                    background: on ? '#1e0c0c' : 'transparent',
-                    border: on ? '0.5px solid #3a1515' : '0.5px solid #222',
-                    color: on ? '#ff6b6b' : '#8f8f8f',
-                  }}
-                >
-                  {tag.label}
-                </button>
-              )
-            })}
+
+            {addingTag ? (
+              <input
+                autoFocus
+                value={newTagLabel}
+                onChange={(e) => setNewTagLabel(e.target.value)}
+                onBlur={handleCreateTag}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur()
+                  if (e.key === 'Escape') {
+                    setNewTagLabel('')
+                    setAddingTag(false)
+                  }
+                }}
+                disabled={creatingTag}
+                placeholder="New tag..."
+                maxLength={30}
+                style={{
+                  borderRadius: 20,
+                  padding: '8px 16px',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  ...sans,
+                  background: 'var(--bg-subtle)',
+                  border: '1.5px dashed var(--border-strong)',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  width: 120,
+                }}
+              />
+            ) : (
+              <button
+                onClick={() => setAddingTag(true)}
+                className="stackd-press"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  borderRadius: 20,
+                  padding: '8px 16px',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  ...sans,
+                  background: 'none',
+                  border: '1.5px dashed var(--border-strong)',
+                  color: 'var(--text-input)',
+                }}
+              >
+                <Plus size={15} strokeWidth={2.5} /> Add Tag
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Submit */}
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
+        {/* Note -- minHeight, not rows: rows' native height calc doesn't
+            account for box-sizing:border-box (set globally), so with rows
+            alone the box renders far shorter than 3 lines actually need. */}
+        <textarea
+          placeholder="Add a quick note about your experience..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
           style={{
-            background: '#f0ece4',
-            color: '#111',
-            borderRadius: 20,
-            padding: '14px 0',
-            fontSize: 16,
-            fontWeight: 500,
-            border: 'none',
-            cursor: submitting ? 'default' : 'pointer',
-            ...serif,
-            opacity: submitting ? 0.6 : 1,
+            background: 'var(--bg-card)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 10,
+            padding: '11px 13px',
+            fontSize: 14,
+            color: 'var(--text-body)',
+            lineHeight: 1.6,
+            outline: 'none',
+            minHeight: 84,
+            ...sans,
           }}
-        >
-          {submitting ? 'Please wait...' : isEditing ? 'Update review' : 'Post review'}
-        </button>
+        />
+
+        {/* Would buy again -- kept compact/low-emphasis to match the
+            redesign's flow; still real data feeding the product page's
+            "buy again %" stat, not decorative. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 13, color: 'var(--text-tertiary)', ...sans }}>Buy again?</span>
+          {[
+            ['Yes', true],
+            ['No', false],
+          ].map(([label, val]) => {
+            const on = wouldBuyAgain === val
+            return (
+              <button
+                key={label}
+                onClick={() => setWouldBuyAgain(on ? null : val)}
+                style={{
+                  borderRadius: 20,
+                  padding: '5px 14px',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  ...sans,
+                  background: on ? 'var(--color-value-bg)' : 'transparent',
+                  border: on ? '0.5px solid var(--color-value-border)' : '0.5px solid var(--border-medium)',
+                  color: on ? 'var(--color-value)' : 'var(--text-muted)',
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
+        <CompareChart bars={compareBars} />
 
         {isEditing && (
           <button
@@ -333,15 +510,61 @@ export default function ReviewForm() {
               border: 'none',
               cursor: deleting ? 'default' : 'pointer',
               fontSize: 13,
-              color: '#ff6b6b',
+              color: 'var(--tier-red)',
               ...sans,
-              padding: '4px 0 20px',
+              padding: '4px 0',
               opacity: deleting ? 0.5 : 1,
+              alignSelf: 'center',
             }}
           >
             {deleting ? 'Deleting...' : 'Delete review'}
           </button>
         )}
+
+        {/* Spacer so content isn't hidden behind the sticky footer */}
+        <div style={{ height: 8 }} />
+      </div>
+
+      {/* Sticky footer */}
+      <div
+        style={{
+          flexShrink: 0,
+          borderTop: '0.5px solid var(--border-subtle)',
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          background: 'var(--bg-nav)',
+        }}
+      >
+        <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)', ...sans, padding: 0 }}>
+          {isEditing ? 'Cancel' : 'Skip'}
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          style={{
+            background: 'var(--border-medium)',
+            color: 'var(--text-primary)',
+            borderRadius: 20,
+            padding: '11px 22px',
+            fontSize: 13,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            border: 'none',
+            cursor: submitting ? 'default' : 'pointer',
+            ...sans,
+            opacity: submitting ? 0.6 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+          }}
+        >
+          {submitting ? 'Saving...' : isEditing ? 'Update Rating' : 'Save Rating'}
+          {!submitting && <CheckCircle2 size={15} />}
+        </button>
       </div>
     </div>
   )

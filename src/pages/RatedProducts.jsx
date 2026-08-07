@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Share2, Check } from 'lucide-react'
 import { NavBar, ScorePill, Skeleton, ErrorState } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { fetchProfileByUsername, fetchRatedProductsForUser } from '../lib/api/profiles'
+import { categoryColor } from '../utils/categoryColor'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 
 function formatCategory(raw) {
   return raw.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
@@ -65,7 +67,7 @@ export default function RatedProducts() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Rated products" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 15, ...sans }}>Profile not found.</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-quiet)', fontSize: 15, ...sans }}>Profile not found.</div>
       </div>
     )
   }
@@ -78,32 +80,130 @@ export default function RatedProducts() {
         title={`${profile.display_name || profile.username}'s rated products`}
         onBack={() => navigate(-1)}
         rightEl={
-          <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, padding: 0 }}>
-            {copied ? 'Copied!' : 'Share'}
+          <button
+            onClick={handleShare}
+            className="stackd-press"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              background: 'var(--tier-teal-bg)',
+              border: '0.5px solid var(--tier-teal-border)',
+              borderRadius: 20,
+              padding: '7px 12px',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--tier-teal)',
+              ...sans,
+              flexShrink: 0,
+            }}
+          >
+            {copied ? <Check size={13} /> : <Share2 size={13} />}
+            {copied ? 'Copied' : 'Share'}
           </button>
         }
       />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 15, ...sans }}>No rated products yet.</div>}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-quiet)', fontSize: 15, ...sans }}>No rated products yet.</div>}
 
         {reviews.map((review, i) => {
           const variant = review.product_variants
           const product = variant.products
+          const color = categoryColor(product.category)
+          const rankColor = i === 0 ? 'var(--tier-gold)' : i === 1 ? 'var(--text-input)' : i === 2 ? 'var(--color-taste)' : 'var(--text-quiet)'
+          const rankBg = i === 0 ? 'var(--tier-gold-bg)' : i === 1 ? 'var(--bg-subtle)' : i === 2 ? 'var(--color-taste-bg)' : 'var(--bg-subtle)'
+          const rankBorder = i === 0 ? 'var(--tier-gold-border)' : i === 1 ? 'var(--border-medium)' : i === 2 ? 'var(--color-taste-border)' : 'var(--border-medium)'
           return (
-            <div key={review.id} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ ...serif, fontSize: 14, color: '#828282', width: 16, flexShrink: 0 }}>{i + 1}</span>
-              <button onClick={() => navigate(`/product/${variant.id}`)} style={{ flex: 1, minWidth: 0, cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>
-                <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+            <button
+              key={review.id}
+              onClick={() => navigate(`/product/${variant.id}`)}
+              className="stackd-elevated stackd-press"
+              style={{
+                position: 'relative',
+                background: 'var(--bg-card)',
+                border: '0.5px solid var(--border)',
+                borderRadius: 18,
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                cursor: 'pointer',
+                textAlign: 'left',
+                width: '100%',
+              }}
+            >
+              <div
+                style={{
+                  ...serif,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: rankColor,
+                  background: rankBg,
+                  border: `0.5px solid ${rankBorder}`,
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {i + 1}
+              </div>
+              <div
+                style={{
+                  position: 'relative',
+                  width: 60,
+                  height: 60,
+                  borderRadius: 14,
+                  background: 'var(--bg-photo)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                }}
+              >
+                {variant.image_url ? (
+                  <img
+                    src={variant.image_url}
+                    alt={variant.image_alt || product.name}
+                    style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain', filter: 'drop-shadow(0 6px 10px rgba(0,0,0,0.4))' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 20, color: 'var(--text-tertiary)', ...serif }}>{product.name.charAt(0)}</span>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ ...serif, fontWeight: 600, fontSize: 16, color: 'var(--text-heading)', letterSpacing: '-0.01em', lineHeight: 1.25 }}>
                   {product.name}
                   {variant.flavor ? ` — ${variant.flavor}` : ''}
                 </div>
-                <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 2 }}>
-                  {product.brand_name} · {formatCategory(product.category)}
-                </div>
-              </button>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', ...sans, marginTop: 3 }}>{product.brand_name}</div>
+                <span
+                  style={{
+                    ...sans,
+                    display: 'inline-block',
+                    marginTop: 6,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color,
+                    background: `${color}26`,
+                    border: `0.5px solid ${color}66`,
+                    borderRadius: 6,
+                    padding: '2px 7px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {formatCategory(product.category)}
+                </span>
+              </div>
               <ScorePill score={review.overall_rating} />
-            </div>
+            </button>
           )
         })}
       </div>

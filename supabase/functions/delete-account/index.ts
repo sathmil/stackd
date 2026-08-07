@@ -29,10 +29,7 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
     const anonUsername = `deleted_user_${userId.slice(0, 8)}`
-    const { error: profileErr } = await admin
-      .from('profiles')
-      .update({ username: anonUsername, display_name: null, avatar_url: null, location: null, goal: null, birthdate: null })
-      .eq('id', userId)
+    const { error: profileErr } = await admin.from('profiles').update({ username: anonUsername, display_name: null, avatar_url: null, location: null, goal: null, birthdate: null }).eq('id', userId)
     if (profileErr) return new Response(JSON.stringify({ error: profileErr.message }), { status: 500, headers: corsHeaders })
 
     const { error: banErr } = await admin.auth.admin.updateUserById(userId, {

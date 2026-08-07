@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Heart, Bookmark, Ban, Candy, Zap, Dumbbell, Leaf, WheatOff, Flame, CheckCircle2, Sparkles } from 'lucide-react'
 import { Avatar, ScorePill, Card, Divider, NavBar, Skeleton, ErrorState } from '../components/ui'
 import { useToast } from '../components/Toast'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchVariantById, fetchRatingSummaries } from '../lib/api/products'
 import { fetchReviewsForVariant, fetchProfilesByIds, fetchTagsForReviews, deleteReview, reportReview } from '../lib/api/reviews'
 import { fetchOwnLists, fetchListMembership, createList, addListItem, removeListItem } from '../lib/api/lists'
+import { fetchWishlistMembership, addToWishlist, removeFromWishlist } from '../lib/api/social'
 import { trackEvent } from '../lib/analytics'
 import { scoreStyle } from '../utils/scoreStyle'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 
 function formatCategory(raw) {
   return raw.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
@@ -28,11 +31,38 @@ const NUTRITION_FIELDS = [
   ['sodium_mg', 'Sodium', 'mg'],
 ]
 
+const BADGE_COLORS = ['var(--tier-purple)', 'var(--color-taste)', 'var(--color-effect)', 'var(--color-value)']
+
+/**
+ * "Ingredient Deep Dive" grid entries -- built entirely from real structured
+ * fields (nutrition facts, dietary flags, AI-generated ingredient flags),
+ * not free-form tags the schema doesn't have. Order: the most notable
+ * nutrition facts first, then dietary flags, then AI flags.
+ * @param {object} variant
+ */
+function ingredientBadges(variant) {
+  const badges = []
+  if (variant.sugar_g === 0) badges.push({ Icon: Ban, label: 'No Sugar' })
+  else if (variant.sugar_g != null) badges.push({ Icon: Candy, label: `${variant.sugar_g}g Sugar` })
+  if (variant.caffeine_mg) badges.push({ Icon: Zap, label: `${variant.caffeine_mg}mg Caffeine` })
+  if (variant.protein_g) badges.push({ Icon: Dumbbell, label: `${variant.protein_g}g Protein` })
+  if (variant.is_vegan) badges.push({ Icon: Leaf, label: 'Vegan' })
+  if (variant.is_gluten_free) badges.push({ Icon: WheatOff, label: 'Gluten-Free' })
+  if (variant.is_keto) badges.push({ Icon: Flame, label: 'Keto' })
+  for (const cert of variant.certifications || []) badges.push({ Icon: CheckCircle2, label: cert })
+  // "no red flags" etc are a null-result flag, not a notable ingredient fact
+  for (const flag of variant.ai_ingredient_flags || []) {
+    if (!/no (red flags|major (concerns|issues))/i.test(flag)) badges.push({ Icon: Sparkles, label: flag })
+  }
+  return badges.map((b, i) => ({ ...b, color: BADGE_COLORS[i % BADGE_COLORS.length] }))
+}
+
 export default function ProductPage() {
   const { variantId } = useParams()
   const navigate = useNavigate()
   const user = useCurrentUser()
   const showToast = useToast()
+  const confirm = useConfirm()
   const [deleting, setDeleting] = useState(false)
   const [showListPicker, setShowListPicker] = useState(false)
   const [showScoreInfo, setShowScoreInfo] = useState(false)
@@ -45,6 +75,40 @@ export default function ProductPage() {
   const [reportReason, setReportReason] = useState('')
   const [submittingReport, setSubmittingReport] = useState(false)
   const [reportedIds, setReportedIds] = useState(new Set())
+  const [showAllReviews, setShowAllReviews] = useState(false)
+  const [wishlistItemId, setWishlistItemId] = useState(undefined) // undefined = unknown/loading, null = not on wishlist
+  const [wishlistBusy, setWishlistBusy] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    fetchWishlistMembership(user.id, variantId).then(({ data: row }) => setWishlistItemId(row?.id ?? null))
+  }, [user, variantId])
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      navigate('/auth')
+      return
+    }
+    setWishlistBusy(true)
+    if (wishlistItemId) {
+      const prevId = wishlistItemId
+      setWishlistItemId(null)
+      const { error: removeErr } = await removeFromWishlist(prevId)
+      if (removeErr) {
+        setWishlistItemId(prevId)
+        showToast("Couldn't update Want to Try. Try again.", 'error')
+      }
+    } else {
+      const { data: item, error: addErr } = await addToWishlist(user.id, variantId)
+      if (addErr) {
+        showToast("Couldn't update Want to Try. Try again.", 'error')
+      } else {
+        setWishlistItemId(item.id)
+        trackEvent('wishlist_add', { variant_id: variantId })
+      }
+    }
+    setWishlistBusy(false)
+  }
 
   const openListPicker = async () => {
     setShowListPicker((v) => !v)
@@ -169,7 +233,7 @@ export default function ProductPage() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="Product" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 15, ...sans }}>Product not found.</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-quiet)', fontSize: 15, ...sans }}>Product not found.</div>
       </div>
     )
   }
@@ -180,7 +244,7 @@ export default function ProductPage() {
   const ownReview = user ? reviews.find((r) => r.user_id === user.id) : null
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete your review? This cannot be undone.')) return
+    if (!(await confirm('This cannot be undone.', { title: 'Delete your review?', confirmLabel: 'Delete Review' }))) return
     setDeleting(true)
     await deleteReview(ownReview.id)
     setDeleting(false)
@@ -204,134 +268,328 @@ export default function ProductPage() {
   }
 
   const nutrition = NUTRITION_FIELDS.filter(([key]) => variant[key] != null)
+  const badges = ingredientBadges(variant)
+  const attributePills = [formatCategory(product.category), variant.is_vegan && 'Vegan', variant.is_keto && 'Keto', variant.is_gluten_free && 'Gluten-Free'].filter(Boolean)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <NavBar title="Product" onBack={() => navigate(-1)} />
+      <NavBar
+        title="Stackd"
+        onBack={() => navigate(-1)}
+        rightEl={
+          <button
+            onClick={user ? openListPicker : undefined}
+            disabled={!user}
+            className="stackd-press"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: Object.keys(membership).length > 0 ? 'var(--color-taste-bg)' : 'var(--bg-subtle)',
+              border: `0.5px solid ${Object.keys(membership).length > 0 ? 'var(--color-taste-border)' : 'var(--border)'}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: user ? 'pointer' : 'default',
+              color: Object.keys(membership).length > 0 ? 'var(--color-taste)' : 'var(--text-muted)',
+              flexShrink: 0,
+            }}
+          >
+            <Heart size={16} strokeWidth={2.25} fill={Object.keys(membership).length > 0 ? 'currentColor' : 'none'} />
+          </button>
+        }
+      />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Hero */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        {/* Hero image */}
+        <div
+          style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 14, padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 208 }}
+        >
           {variant.image_url ? (
-            <img
-              src={variant.image_url}
-              alt={variant.image_alt || `${product.name}${variant.flavor ? ` ${variant.flavor}` : ''}`}
-              style={{ width: 54, height: 54, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
-            />
+            <img src={variant.image_url} alt={variant.image_alt || `${product.name}${variant.flavor ? ` ${variant.flavor}` : ''}`} style={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain' }} />
           ) : (
+            <div style={{ fontSize: 40, color: 'var(--text-tertiary)', ...serif }}>{product.name.charAt(0)}</div>
+          )}
+        </div>
+
+        {/* Title */}
+        <div>
+          {product.status !== 'approved' && (
             <div
               style={{
-                width: 54,
-                height: 54,
-                borderRadius: 10,
-                background: '#1a1a1a',
-                border: '0.5px solid #222',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 22,
-                color: '#868686',
-                flexShrink: 0,
-                ...serif,
+                display: 'inline-block',
+                background: 'var(--tier-gold-bg)',
+                border: '0.5px solid var(--tier-gold-border)',
+                color: 'var(--tier-gold)',
+                borderRadius: 20,
+                padding: '2px 9px',
+                fontSize: 11,
+                fontWeight: 500,
+                ...sans,
+                marginBottom: 6,
               }}
             >
-              {product.name.charAt(0)}
+              Pending review
             </div>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {product.status !== 'approved' && (
-              <div
-                style={{
-                  display: 'inline-block',
-                  background: '#252010',
-                  border: '0.5px solid #352f1a',
-                  color: '#e8c97a',
-                  borderRadius: 20,
-                  padding: '2px 9px',
-                  fontSize: 11,
-                  fontWeight: 500,
-                  ...sans,
-                  marginBottom: 5,
-                }}
-              >
-                Pending review
-              </div>
-            )}
-            <div style={{ ...serif, fontSize: 17, color: '#f0ece4', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
-              {product.name}
-              {variant.flavor ? ` — ${variant.flavor}` : ''}
-            </div>
-            <div style={{ fontSize: 13, color: '#868686', ...sans, marginTop: 3 }}>
-              {brand?.name || product.brand_name} · {formatCategory(product.category)}
-            </div>
+          <div style={{ ...serif, fontSize: 24, color: 'var(--text-heading)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+            {product.name}
+            {variant.flavor ? ` — ${variant.flavor}` : ''}
           </div>
-          <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            {summary?.ratings_count ? (
-              <>
-                <div style={{ ...serif, fontSize: 36, color: '#5ecfcf', letterSpacing: '-0.03em', lineHeight: 1 }}>{summary.overall_score.toFixed(1)}</div>
-                <div style={{ fontSize: 11, color: '#828282', ...sans, marginTop: 3 }}>{summary.ratings_count.toLocaleString()} ratings</div>
-              </>
-            ) : (
-              <div style={{ fontSize: 13, color: '#828282', ...sans }}>New</div>
-            )}
+          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', ...sans, marginTop: 4 }}>
+            {brand?.name || product.brand_name} · {formatCategory(product.category)}
+            {variant.size ? ` · ${variant.size}` : ''}
           </div>
         </div>
 
-        {summary?.ratings_count > 0 && summary.buy_again_pct != null && <div style={{ fontSize: 13, color: '#969696', ...sans }}>{summary.buy_again_pct}% would buy again</div>}
+        {/* Attribute pills */}
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {attributePills.map((label) => (
+            <span key={label} style={{ border: '0.5px solid var(--border-medium)', borderRadius: 20, padding: '5px 13px', fontSize: 12, color: 'var(--text-input)', ...sans }}>
+              {label}
+            </span>
+          ))}
+        </div>
 
-        {/* Objective info -- nutrition facts and AI ingredient analysis are
-            facts about the product, not anyone's subjective rating, so they
-            live here rather than blended into the score above. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 10, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>Nutrition & ingredients</span>
+        {/* Stackd Score */}
+        <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ ...serif, fontSize: 16, color: 'var(--text-primary)' }}>Stackd Score</span>
+            {summary?.ratings_count ? (
+              <span>
+                <span style={{ ...serif, fontSize: 30, color: 'var(--text-heading)', letterSpacing: '-0.02em' }}>{summary.overall_score.toFixed(1)}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-quiet)', ...sans }}> /10</span>
+              </span>
+            ) : (
+              <span style={{ fontSize: 13, color: 'var(--text-quiet)', ...sans }}>New</span>
+            )}
+          </div>
 
-          {nutrition.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {nutrition.map(([key, label, unit]) => (
-                <div key={key} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '8px 12px', flex: '1 0 40%' }}>
-                  <div style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>
-                    {variant[key]}
-                    {unit}
+          {summary?.ratings_count > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                ['Taste', summary.taste_score, 'var(--color-taste)'],
+                ['Value', summary.value_score, 'var(--color-value)'],
+                ['Effect', summary.effectiveness_score, 'var(--color-effect)'],
+              ].map(([label, score, color]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 44, fontSize: 12, color: 'var(--text-secondary)', ...sans, flexShrink: 0 }}>{label}</span>
+                  <div style={{ flex: 1, height: 10, borderRadius: 5, background: 'var(--bg-subtle)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${(Number(score || 0) / 10) * 100}%`, background: color, borderRadius: 5 }} />
                   </div>
-                  <div style={{ fontSize: 11, color: '#868686', ...sans, marginTop: 2 }}>{label}</div>
+                  <span style={{ width: 28, textAlign: 'right', fontSize: 12, color: 'var(--text-input)', ...sans, flexShrink: 0 }}>{Number(score || 0).toFixed(1)}</span>
                 </div>
               ))}
             </div>
           )}
 
-          <div style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {summary?.ratings_count > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--text-quiet)', ...sans }}>
+              {summary.ratings_count.toLocaleString()} rating{summary.ratings_count !== 1 ? 's' : ''}
+              {summary.buy_again_pct != null ? ` · ${summary.buy_again_pct}% would buy again` : ''}
+            </div>
+          )}
+        </div>
+
+        {/* Add to Stack / Want to Try */}
+        {user && (
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={() => setShowScoreInfo(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer', alignSelf: 'flex-start' }}
+              onClick={openListPicker}
+              style={{
+                flex: 1,
+                background: showListPicker ? 'var(--border)' : 'var(--border-medium)',
+                color: 'var(--text-primary)',
+                border: 'none',
+                borderRadius: 20,
+                padding: '13px 0',
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: 'pointer',
+                ...serif,
+              }}
             >
-              <span style={{ fontSize: 12, color: '#969696', ...sans }}>Ingredient quality (AI)</span>
-              <span
+              {showListPicker ? 'Close' : '+ Add to Stack'}
+            </button>
+            {!ownReview && (
+              <button
+                onClick={handleToggleWishlist}
+                disabled={wishlistBusy || wishlistItemId === undefined}
+                title="Want to try"
+                className="stackd-press"
                 style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  border: '0.5px solid #3a3a3a',
-                  color: '#969696',
-                  fontSize: 10,
+                  width: 50,
+                  flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  background: wishlistItemId ? 'var(--color-taste-bg)' : 'none',
+                  border: wishlistItemId ? '0.5px solid var(--color-taste-border)' : '0.5px solid var(--border-medium)',
+                  color: wishlistItemId ? 'var(--color-taste)' : 'var(--text-input)',
+                  borderRadius: 20,
+                  cursor: wishlistBusy ? 'default' : 'pointer',
+                  opacity: wishlistBusy ? 0.6 : 1,
+                }}
+              >
+                <Bookmark size={17} fill={wishlistItemId ? 'currentColor' : 'none'} strokeWidth={2} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {user && showListPicker && (
+          <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, marginTop: -8 }}>
+            {ownLists === null && <div style={{ fontSize: 13, color: 'var(--text-quiet)', ...sans }}>Loading your lists...</div>}
+            {ownLists?.length === 0 && <div style={{ fontSize: 13, color: 'var(--text-quiet)', ...sans }}>You don't have any lists yet -- make one below.</div>}
+            {ownLists?.map((list) => {
+              const isAdded = !!membership[list.id]
+              return (
+                <div key={list.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ flex: 1, fontSize: 14, color: 'var(--text-input)', ...sans }}>
+                    {list.name}
+                    {isAdded && <span style={{ color: 'var(--tier-teal)', fontSize: 12, marginLeft: 6 }}>(Added)</span>}
+                  </span>
+                  <button
+                    onClick={() => handleToggleList(list.id, variant.id)}
+                    style={{
+                      background: isAdded ? 'transparent' : 'var(--text-heading)',
+                      color: isAdded ? 'var(--tier-red)' : 'var(--bg-nav)',
+                      border: isAdded ? '0.5px solid var(--tier-red-border)' : 'none',
+                      borderRadius: 8,
+                      padding: '6px 12px',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      ...sans,
+                    }}
+                  >
+                    {isAdded ? 'Remove' : 'Add'}
+                  </button>
+                </div>
+              )
+            })}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+                placeholder="New list name"
+                style={{
+                  flex: 1,
+                  background: 'var(--bg-subtle)',
+                  border: '0.5px solid var(--border-input)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  fontSize: 13,
+                  color: 'var(--text-input)',
+                  outline: 'none',
+                  ...sans,
+                }}
+              />
+              <button
+                onClick={() => handleCreateAndAdd(variant.id)}
+                disabled={creatingList || !newListName.trim()}
+                style={{
+                  background: 'var(--text-heading)',
+                  color: 'var(--bg-nav)',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  border: 'none',
+                  cursor: 'pointer',
+                  opacity: creatingList || !newListName.trim() ? 0.5 : 1,
                   ...sans,
                 }}
               >
-                i
-              </span>
-              {variant.ai_ingredient_quality_score != null ? (
-                <ScorePill score={variant.ai_ingredient_quality_score} />
-              ) : (
-                <span style={{ fontSize: 11, color: '#828282', ...sans }}>Not yet analyzed</span>
-              )}
-            </button>
-            {variant.ai_ingredient_summary && <div style={{ fontSize: 13, color: '#969696', ...sans, lineHeight: 1.6 }}>{variant.ai_ingredient_summary}</div>}
-            {variant.ai_ingredient_quality_score != null && (
-              <div style={{ fontSize: 11, color: '#828282', ...sans, fontStyle: 'italic' }}>AI-generated estimate, not medical or nutritional advice.</div>
-            )}
+                {creatingList ? '...' : 'Create'}
+              </button>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="checkbox" checked={newListPublic} onChange={(e) => setNewListPublic(e.target.checked)} />
+              <span style={{ fontSize: 12, color: 'var(--text-faint)', ...sans }}>Public (anyone with the link can view it)</span>
+            </label>
           </div>
+        )}
+
+        <Divider />
+
+        {/* Ingredient Deep Dive -- badge cards only (icon-in-circle, matching
+            the design reference); raw nutrition numbers get their own
+            "Nutrition Facts" section below instead of being merged in here,
+            since several of them (protein) already appear as a badge and
+            showing both was a duplicate. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span style={{ ...serif, fontSize: 18, color: 'var(--text-primary)' }}>Ingredient Deep Dive</span>
+
+          {badges.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {badges.map((b, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: 'var(--bg-card)',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 12,
+                    padding: '16px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <b.Icon size={22} color={b.color} strokeWidth={2} />
+                  <span style={{ fontSize: 12, color: 'var(--text-input)', ...sans, textAlign: 'center' }}>{b.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {nutrition.length > 0 && (
+          <>
+            <Divider />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span style={{ ...serif, fontSize: 18, color: 'var(--text-primary)' }}>Nutrition Facts</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {nutrition.map(([key, label, unit]) => (
+                  <div key={key} style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '8px 12px', flex: '1 0 40%' }}>
+                    <div style={{ ...serif, fontSize: 16, color: 'var(--text-primary)' }}>
+                      {variant[key]}
+                      {unit}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', ...sans, marginTop: 2 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button
+            onClick={() => setShowScoreInfo(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: 'var(--bg-card)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 10,
+              padding: '10px 12px',
+              cursor: 'pointer',
+              alignSelf: 'stretch',
+              textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', ...sans }}>Ingredient quality (AI)</span>
+            {variant.ai_ingredient_quality_score != null ? (
+              <ScorePill score={variant.ai_ingredient_quality_score} extraStyle={{ marginLeft: 'auto' }} />
+            ) : (
+              <span style={{ fontSize: 11, color: 'var(--text-quiet)', ...sans, marginLeft: 'auto' }}>Not yet analyzed</span>
+            )}
+          </button>
+          {variant.ai_ingredient_summary && <div style={{ fontSize: 13, color: 'var(--text-secondary)', ...sans, lineHeight: 1.6 }}>{variant.ai_ingredient_summary}</div>}
         </div>
 
         {showScoreInfo && (
@@ -342,8 +600,8 @@ export default function ProductPage() {
             <div
               onClick={(e) => e.stopPropagation()}
               style={{
-                background: '#161616',
-                border: '0.5px solid #262626',
+                background: 'var(--bg-modal)',
+                border: '0.5px solid var(--border)',
                 borderRadius: '16px 16px 0 0',
                 padding: 20,
                 width: '100%',
@@ -356,12 +614,12 @@ export default function ProductPage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ ...serif, fontSize: 17, color: '#e8e4dc' }}>Ingredient quality score</span>
-                <button onClick={() => setShowScoreInfo(false)} style={{ background: 'none', border: 'none', color: '#969696', fontSize: 18, cursor: 'pointer', padding: 0 }}>
+                <span style={{ ...serif, fontSize: 17, color: 'var(--text-primary)' }}>Ingredient quality score</span>
+                <button onClick={() => setShowScoreInfo(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 18, cursor: 'pointer', padding: 0 }}>
                   ✕
                 </button>
               </div>
-              <div style={{ fontSize: 14, color: '#999', ...sans, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-body)', ...sans, lineHeight: 1.6 }}>
                 An AI model reads this variant's ingredient list and rates it 1.0 (poor) to 10.0 (excellent) based on things like added sugars, artificial sweeteners/colors/flavors, proprietary blends
                 that hide dosages, and genuinely beneficial ingredients. It's a read on the ingredients only -- not your personal taste or value rating, and not medical or nutritional advice.
               </div>
@@ -393,7 +651,7 @@ export default function ProductPage() {
                       >
                         {lo.toFixed(1)}–{hi.toFixed(1)}
                       </span>
-                      <span style={{ fontSize: 13, color: '#888', ...sans }}>{desc}</span>
+                      <span style={{ fontSize: 13, color: 'var(--text-body)', ...sans }}>{desc}</span>
                     </div>
                   )
                 })}
@@ -405,138 +663,108 @@ export default function ProductPage() {
         {user && variant.created_by === user.id && product.status === 'pending' && (
           <button
             onClick={() => navigate(`/product/${variant.id}/edit`, { replace: true })}
-            style={{ alignSelf: 'flex-start', background: 'none', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '8px 16px', fontSize: 13, color: '#ccc', cursor: 'pointer', ...sans }}
+            style={{
+              alignSelf: 'flex-start',
+              background: 'none',
+              border: '0.5px solid var(--border-medium)',
+              borderRadius: 20,
+              padding: '8px 16px',
+              fontSize: 13,
+              color: 'var(--text-input)',
+              cursor: 'pointer',
+              ...sans,
+            }}
           >
             Edit product
           </button>
         )}
 
-        {user && (
-          <div>
-            <button
-              onClick={openListPicker}
-              style={{ background: 'none', border: '0.5px solid #2a2a2a', borderRadius: 20, padding: '8px 16px', fontSize: 13, color: '#ccc', cursor: 'pointer', ...sans }}
-            >
-              {showListPicker ? 'Close' : '+ Add to list'}
-            </button>
-
-            {showListPicker && (
-              <div style={{ marginTop: 10, background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {ownLists === null && <div style={{ fontSize: 13, color: '#828282', ...sans }}>Loading your lists...</div>}
-                {ownLists?.length === 0 && <div style={{ fontSize: 13, color: '#828282', ...sans }}>You don't have any lists yet -- make one below.</div>}
-                {ownLists?.map((list) => {
-                  const isAdded = !!membership[list.id]
-                  return (
-                    <div key={list.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ flex: 1, fontSize: 14, color: '#ccc', ...sans }}>
-                        {list.name}
-                        {isAdded && <span style={{ color: '#5ecfcf', fontSize: 12, marginLeft: 6 }}>(Added)</span>}
-                      </span>
-                      <button
-                        onClick={() => handleToggleList(list.id, variant.id)}
-                        style={{
-                          background: isAdded ? 'transparent' : '#f0ece4',
-                          color: isAdded ? '#ff6b6b' : '#111',
-                          border: isAdded ? '0.5px solid #3a1a1a' : 'none',
-                          borderRadius: 8,
-                          padding: '6px 12px',
-                          fontSize: 12,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          ...sans,
-                        }}
-                      >
-                        {isAdded ? 'Remove' : 'Add'}
-                      </button>
-                    </div>
-                  )
-                })}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    value={newListName}
-                    onChange={(e) => setNewListName(e.target.value)}
-                    placeholder="New list name"
-                    style={{ flex: 1, background: '#1a1a1a', border: '0.5px solid #252525', borderRadius: 8, padding: '8px 10px', fontSize: 13, color: '#ccc', outline: 'none', ...sans }}
-                  />
-                  <button
-                    onClick={() => handleCreateAndAdd(variant.id)}
-                    disabled={creatingList || !newListName.trim()}
-                    style={{
-                      background: '#f0ece4',
-                      color: '#111',
-                      borderRadius: 8,
-                      padding: '8px 12px',
-                      fontSize: 13,
-                      fontWeight: 500,
-                      border: 'none',
-                      cursor: 'pointer',
-                      opacity: creatingList || !newListName.trim() ? 0.5 : 1,
-                      ...sans,
-                    }}
-                  >
-                    {creatingList ? '...' : 'Create'}
-                  </button>
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={newListPublic} onChange={(e) => setNewListPublic(e.target.checked)} />
-                  <span style={{ fontSize: 12, color: '#666', ...sans }}>Public (anyone with the link can view it)</span>
-                </label>
-              </div>
-            )}
-          </div>
-        )}
-
         <Divider />
 
-        {/* Reviews */}
+        {/* Reviews -- "What people think", not "What your friends think": there's
+            no follow graph yet (aggregate-only ratings for MVP, see DECISIONS.md),
+            so this is every review, not a friends-filtered subset. */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>Reviews ({reviews.length})</span>
+          <span style={{ ...serif, fontSize: 18, color: 'var(--text-primary)' }}>What people think</span>
+          {reviews.length > 3 ? (
+            <button
+              onClick={() => setShowAllReviews((v) => !v)}
+              className="stackd-press"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--tier-purple)', ...sans, padding: 0 }}
+            >
+              {showAllReviews ? 'Show less' : `See all ${reviews.length}`}
+            </button>
+          ) : (
+            <span style={{ fontSize: 12, color: 'var(--text-quiet)', ...sans }}>{reviews.length}</span>
+          )}
         </div>
 
-        {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: '#828282', fontSize: 14, ...sans }}>No reviews yet. Be the first.</div>}
+        {reviews.length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-quiet)', fontSize: 14, ...sans }}>No reviews yet. Be the first.</div>}
 
-        {reviews.map((review) => {
+        {(showAllReviews ? reviews : reviews.slice(0, 3)).map((review) => {
           const isOwn = user && review.user_id === user.id
           return (
-            <Card key={review.id} style={{ gap: 8, border: isOwn ? '0.5px solid #2a3a3a' : undefined }}>
+            <Card key={review.id} style={{ gap: 8, border: isOwn ? '0.5px solid var(--tier-teal-border)' : undefined }}>
               {review.reviewer ? (
                 <button
                   onClick={() => navigate(`/profile/${review.reviewer.username}`)}
                   style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
                 >
                   <Avatar user={review.reviewer} size="sm" />
-                  <span style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isOwn ? 'You' : review.reviewer.username}</span>
+                  <span style={{ ...serif, fontSize: 14, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{isOwn ? 'You' : review.reviewer.username}</span>
                   <ScorePill score={review.overall_rating} extraStyle={{ marginLeft: 'auto' }} />
                 </button>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ ...serif, fontSize: 14, color: '#e8e4dc', letterSpacing: '-0.01em' }}>Unknown</span>
+                  <span style={{ ...serif, fontSize: 14, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Unknown</span>
                   <ScorePill score={review.overall_rating} extraStyle={{ marginLeft: 'auto' }} />
                 </div>
               )}
-              {review.notes && <div style={{ fontSize: 14, color: '#969696', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
+              {review.notes && <div style={{ fontSize: 14, color: 'var(--text-secondary)', ...sans, lineHeight: 1.6, fontStyle: 'italic' }}>"{review.notes}"</div>}
               {review.tags.length > 0 && (
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   {review.tags.map((tag) => (
-                    <span key={tag.id} style={{ border: '0.5px solid #222', borderRadius: 20, padding: '2px 8px', fontSize: 11, color: '#868686', ...sans }}>
+                    <span key={tag.id} style={{ border: '0.5px solid var(--border)', borderRadius: 20, padding: '2px 8px', fontSize: 11, color: 'var(--text-tertiary)', ...sans }}>
                       {tag.label}
                     </span>
                   ))}
                 </div>
               )}
               {isOwn && (
-                <div style={{ display: 'flex', gap: 14 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={() => navigate(`/product/${variant.id}/review`)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, padding: 0 }}
+                    className="stackd-press"
+                    style={{
+                      background: 'var(--tier-teal-bg)',
+                      border: '0.5px solid var(--tier-teal-border)',
+                      borderRadius: 20,
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: 'var(--tier-teal)',
+                      ...sans,
+                      padding: '7px 16px',
+                    }}
                   >
                     Edit
                   </button>
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    style={{ background: 'none', border: 'none', cursor: deleting ? 'default' : 'pointer', fontSize: 13, color: '#ff6b6b', ...sans, padding: 0, opacity: deleting ? 0.5 : 1 }}
+                    className="stackd-press"
+                    style={{
+                      background: 'var(--tier-red-bg)',
+                      border: '0.5px solid var(--tier-red-border)',
+                      borderRadius: 20,
+                      cursor: deleting ? 'default' : 'pointer',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: 'var(--tier-red)',
+                      ...sans,
+                      padding: '7px 16px',
+                      opacity: deleting ? 0.5 : 1,
+                    }}
                   >
                     {deleting ? 'Deleting...' : 'Delete'}
                   </button>
@@ -546,9 +774,9 @@ export default function ProductPage() {
               {!isOwn && user && (
                 <div>
                   {reportedIds.has(review.id) ? (
-                    <span style={{ fontSize: 12, color: '#828282', ...sans }}>Reported</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-quiet)', ...sans }}>Reported</span>
                   ) : (
-                    <button onClick={() => toggleReport(review.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#828282', ...sans, padding: 0 }}>
+                    <button onClick={() => toggleReport(review.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--text-quiet)', ...sans, padding: 0 }}>
                       {reportingId === review.id ? 'Cancel' : 'Report'}
                     </button>
                   )}
@@ -559,7 +787,16 @@ export default function ProductPage() {
                         value={reportReason}
                         onChange={(e) => setReportReason(e.target.value)}
                         placeholder="What's wrong with this review? (optional)"
-                        style={{ background: '#1a1a1a', border: '0.5px solid #252525', borderRadius: 8, padding: '8px 10px', fontSize: 13, color: '#ccc', outline: 'none', ...sans }}
+                        style={{
+                          background: 'var(--bg-subtle)',
+                          border: '0.5px solid var(--border-input)',
+                          borderRadius: 8,
+                          padding: '8px 10px',
+                          fontSize: 13,
+                          color: 'var(--text-input)',
+                          outline: 'none',
+                          ...sans,
+                        }}
                       />
                       <button
                         onClick={() => handleSubmitReport(review.id)}
@@ -567,8 +804,8 @@ export default function ProductPage() {
                         style={{
                           alignSelf: 'flex-start',
                           background: 'none',
-                          border: '0.5px solid #3a1a1a',
-                          color: '#ff6b6b',
+                          border: '0.5px solid var(--tier-red-border)',
+                          color: 'var(--tier-red)',
                           borderRadius: 8,
                           padding: '6px 12px',
                           fontSize: 12,
@@ -593,8 +830,8 @@ export default function ProductPage() {
           <button
             onClick={() => navigate(`/product/${variant.id}/review`)}
             style={{
-              background: '#f0ece4',
-              color: '#111',
+              background: 'var(--text-heading)',
+              color: 'var(--bg-nav)',
               borderRadius: 20,
               padding: '14px 0',
               fontSize: 16,

@@ -1,14 +1,14 @@
 import { useNavigate } from 'react-router-dom'
 import { NavBar } from '../components/ui'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 
 function Section({ title, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ ...serif, fontSize: 16, color: '#e8e4dc' }}>{title}</div>
-      <div style={{ fontSize: 14, color: '#999', ...sans, lineHeight: 1.7 }}>{children}</div>
+      <div style={{ ...serif, fontSize: 16, color: 'var(--text-primary)' }}>{title}</div>
+      <div style={{ fontSize: 14, color: 'var(--text-body)', ...sans, lineHeight: 1.7 }}>{children}</div>
     </div>
   )
 }
@@ -19,7 +19,7 @@ export default function Privacy() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <NavBar title="Privacy Policy" onBack={() => navigate(-1)} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <div style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Last updated: July 2026</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>Last updated: July 2026</div>
 
         <Section title="What we collect">
           Your email and password (handled by our auth provider, Supabase -- we never see your password in plain text), profile info you choose to add (username, display name, avatar, location, goal),

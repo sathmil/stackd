@@ -1,23 +1,111 @@
+import { Home, Search, ScanLine, Layers, CircleUserRound, Star, ArrowLeft } from 'lucide-react'
 import { scoreStyle } from '../utils/scoreStyle'
 import { colorHash } from '../utils/colorHash'
+import { useTheme } from '../hooks/useTheme'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 
 const AVATAR_STYLE = {
-  coral: { background: '#2a1010', color: '#ff6b6b' },
-  cyan: { background: '#0d2020', color: '#5ecfcf' },
-  lav: { background: '#1a1525', color: '#a78bfa' },
-  warm: { background: '#252010', color: '#e8c97a' },
+  coral: { background: 'var(--avatar-coral-bg)', color: 'var(--avatar-coral-fg)' },
+  cyan: { background: 'var(--avatar-cyan-bg)', color: 'var(--avatar-cyan-fg)' },
+  lav: { background: 'var(--avatar-lav-bg)', color: 'var(--avatar-lav-fg)' },
+  warm: { background: 'var(--avatar-warm-bg)', color: 'var(--avatar-warm-fg)' },
 }
 
-/** @param {{ user: { id: string, username?: string, avatar_url?: string|null }, size?: 'sm'|'md'|'lg' }} props */
+/** A ring gauge (conic-gradient, not SVG) showing value/max as a fraction of the circle, with the value centered inside. */
+export function CircularProgress({ value, max = 10, color, size = 44 }) {
+  const pct = Math.max(0, Math.min(1, value / max)) * 360
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: `conic-gradient(${color} ${pct}deg, var(--border-medium) 0deg)`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{
+          width: size - 9,
+          height: size - 9,
+          borderRadius: '50%',
+          background: 'var(--bg-card)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: size * 0.27,
+          fontWeight: 700,
+          color,
+          ...sans,
+        }}
+      >
+        {value.toFixed(1)}
+      </div>
+    </div>
+  )
+}
+
+/** "Dark"/"Light" label + a real sliding switch (not a pill button) that flips the app's theme, persisted across sessions. */
+export function ThemeToggle() {
+  const [theme, toggleTheme] = useTheme()
+  const isDark = theme === 'dark'
+  return (
+    <button
+      onClick={toggleTheme}
+      role="switch"
+      aria-checked={isDark}
+      className="stackd-press"
+      style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+    >
+      <span style={{ fontSize: 13, color: 'var(--text-muted)', ...sans }}>{isDark ? 'Dark' : 'Light'}</span>
+      <span
+        style={{
+          position: 'relative',
+          width: 44,
+          height: 25,
+          borderRadius: 13,
+          background: isDark ? 'var(--border-strong)' : 'var(--tier-gold-bg)',
+          border: '0.5px solid var(--border-medium)',
+          transition: 'background 0.2s ease',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: isDark ? 21 : 2,
+            width: 19,
+            height: 19,
+            borderRadius: '50%',
+            background: 'var(--bg-nav)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 11,
+            transition: 'left 0.2s ease',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          }}
+        >
+          {isDark ? '☾' : '☀'}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+/** @param {{ user: { id: string, username?: string, avatar_url?: string|null }, size?: 'sm'|'md'|'lg'|'xl' }} props */
 export function Avatar({ user, size = 'sm' }) {
-  const px = { sm: 28, md: 36, lg: 48 }[size]
-  const fs = { sm: 10, md: 12, lg: 15 }[size]
+  const px = { sm: 28, md: 36, lg: 48, xl: 112 }[size]
+  const fs = { sm: 10, md: 12, lg: 15, xl: 36 }[size]
 
   if (user.avatar_url) {
-    return <img src={user.avatar_url} alt="" style={{ width: px, height: px, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+    return <img src={user.avatar_url} alt="" style={{ width: px, height: px, borderRadius: '50%', objectFit: 'contain', background: 'var(--bg-subtle)', flexShrink: 0 }} />
   }
 
   const style = AVATAR_STYLE[colorHash(user.id || user.username || '?')]
@@ -49,83 +137,107 @@ export function ScorePill({ score, extraStyle }) {
   return (
     <span
       style={{
-        background: s.bg,
-        color: s.color,
-        border: `0.5px solid ${s.border}`,
+        background: s.color,
+        color: s.text,
         borderRadius: 20,
         fontSize: 13,
-        fontWeight: 500,
-        padding: '3px 10px',
-        ...serif,
+        fontWeight: 700,
+        padding: '4px 10px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3,
+        ...sans,
         letterSpacing: '-0.01em',
         flexShrink: 0,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
         ...extraStyle,
       }}
     >
-      {score.toFixed(1)}
+      <Star size={11} fill="#FFC93C" strokeWidth={0} />
+      {(score / 2).toFixed(1)}
     </span>
   )
 }
 
 export function BottomNav({ active, onNavigate }) {
   const items = [
-    { key: 'feed', label: 'Feed', icon: '⌂' },
-    { key: 'search', label: 'Search', icon: '⌕' },
-    { key: 'scan', label: 'Scan', icon: '▣' },
-    { key: 'lists', label: 'Lists', icon: '☰' },
-    { key: 'profile', label: 'Profile', icon: '◯' },
+    { key: 'feed', label: 'Feed', Icon: Home },
+    { key: 'search', label: 'Search', Icon: Search },
+    { key: 'scan', label: 'Scan', Icon: ScanLine },
+    { key: 'lists', label: 'Lists', Icon: Layers },
+    { key: 'profile', label: 'Profile', Icon: CircleUserRound },
   ]
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0 16px', borderTop: '0.5px solid #1e1e1e', background: '#111', flexShrink: 0 }}>
-      {items.map((item) => (
-        <button
-          key={item.key}
-          onClick={() => onNavigate(item.key)}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px' }}
-        >
-          <span style={{ fontSize: 20, color: active === item.key ? '#f0ece4' : '#828282', lineHeight: 1 }}>{item.icon}</span>
-          <span style={{ fontSize: 10, ...sans, color: active === item.key ? '#f0ece4' : '#828282' }}>{item.label}</span>
-        </button>
-      ))}
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        padding: '10px 0 16px',
+        borderTop: '0.5px solid var(--border-subtle)',
+        background: 'var(--bg-nav)',
+        flexShrink: 0,
+      }}
+    >
+      {items.map(({ key, label, Icon }) => {
+        const isActive = active === key
+        return (
+          <button
+            key={key}
+            onClick={() => onNavigate(key)}
+            className="stackd-press"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px' }}
+          >
+            <Icon size={22} strokeWidth={isActive ? 2.25 : 1.75} color={isActive ? 'var(--text-heading)' : 'var(--text-quiet)'} />
+            <span style={{ fontSize: 10, ...sans, color: isActive ? 'var(--text-heading)' : 'var(--text-quiet)', fontWeight: isActive ? 600 : 500 }}>{label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
 
-export function Card({ children, style: extra = {}, onClick }) {
-  const baseStyle = { background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px', display: 'flex', flexDirection: 'column', gap: 8, ...extra }
+export function Card({ children, style: extra = {}, onClick, className }) {
+  const baseStyle = { background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 18, padding: '12px', display: 'flex', flexDirection: 'column', gap: 8, ...extra }
   if (onClick) {
     return (
-      <button onClick={onClick} style={{ ...baseStyle, textAlign: 'left', width: '100%', font: 'inherit', color: 'inherit' }}>
+      <button className={className} onClick={onClick} style={{ ...baseStyle, textAlign: 'left', width: '100%', font: 'inherit', color: 'inherit' }}>
         {children}
       </button>
     )
   }
-  return <div style={baseStyle}>{children}</div>
+  return (
+    <div className={className} style={baseStyle}>
+      {children}
+    </div>
+  )
 }
 
 export function Divider() {
-  return <div style={{ height: '0.5px', background: '#1e1e1e', flexShrink: 0 }} />
+  return <div style={{ height: '0.5px', background: 'var(--border-subtle)', flexShrink: 0 }} />
 }
 
 export function SectionLabel({ children }) {
-  return <span style={{ fontSize: 10, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>{children}</span>
+  return <span style={{ fontSize: 10, color: 'var(--text-quiet)', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>{children}</span>
 }
 
 export function Chip({ label, active, onClick }) {
   return (
     <button
       onClick={onClick}
+      className="stackd-press"
       style={{
         borderRadius: 20,
-        padding: '5px 13px',
-        fontSize: 12,
+        padding: '7px 15px',
+        fontSize: 13,
         cursor: 'pointer',
         ...sans,
         whiteSpace: 'nowrap',
-        border: active ? 'none' : '0.5px solid #252525',
-        background: active ? '#f0ece4' : 'transparent',
-        color: active ? '#111' : '#8f8f8f',
-        fontWeight: active ? 500 : 400,
+        border: active ? 'none' : '0.5px solid var(--border-input)',
+        background: active ? 'var(--text-heading)' : 'transparent',
+        color: active ? 'var(--bg-nav)' : 'var(--text-muted)',
+        fontWeight: active ? 600 : 400,
+        boxShadow: active ? '0 2px 8px -2px rgba(0,0,0,0.3)' : 'none',
       }}
     >
       {label}
@@ -135,8 +247,8 @@ export function Chip({ label, active, onClick }) {
 
 export function LoadingScreen() {
   return (
-    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111' }}>
-      <div style={{ ...serif, fontStyle: 'italic', fontSize: 28, color: '#828282' }}>Stackd</div>
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-nav)' }}>
+      <div style={{ ...serif, fontStyle: 'italic', fontSize: 28, color: 'var(--text-quiet)' }}>Stackd</div>
     </div>
   )
 }
@@ -187,9 +299,12 @@ export function Skeleton({ variant = 'rows', count = 5 }) {
 export function ErrorState({ message = "Couldn't load this. Try again in a moment.", onRetry }) {
   return (
     <div style={{ textAlign: 'center', padding: '48px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-      <div style={{ color: '#ff6b6b', fontSize: 15, ...sans }}>{message}</div>
+      <div style={{ color: 'var(--tier-red)', fontSize: 15, ...sans }}>{message}</div>
       {onRetry && (
-        <button onClick={onRetry} style={{ background: 'none', border: '0.5px solid #3a1a1a', borderRadius: 20, padding: '8px 18px', fontSize: 13, color: '#ff6b6b', cursor: 'pointer', ...sans }}>
+        <button
+          onClick={onRetry}
+          style={{ background: 'none', border: '0.5px solid var(--tier-red-border)', borderRadius: 20, padding: '8px 18px', fontSize: 13, color: 'var(--tier-red)', cursor: 'pointer', ...sans }}
+        >
           Try again
         </button>
       )}
@@ -199,16 +314,47 @@ export function ErrorState({ message = "Couldn't load this. Try again in a momen
 
 export function NavBar({ title, onBack, rightEl }) {
   return (
-    <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #1e1e1e', flexShrink: 0 }}>
+    <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '0.5px solid var(--border-subtle)', flexShrink: 0 }}>
       {onBack ? (
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#8f8f8f', padding: 0, lineHeight: 1 }}>
-          ←
+        <button
+          onClick={onBack}
+          className="stackd-press"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'var(--bg-subtle)',
+            border: '0.5px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: 'var(--text-primary)',
+            flexShrink: 0,
+          }}
+        >
+          <ArrowLeft size={16} strokeWidth={2.25} />
         </button>
       ) : (
-        <div style={{ width: 28 }} />
+        <div style={{ width: 32 }} />
       )}
-      <span style={{ ...{ fontFamily: 'Georgia, serif' }, fontSize: 16, color: '#e8e4dc' }}>{title}</span>
-      {rightEl || <div style={{ width: 28 }} />}
+      <span
+        style={{
+          fontFamily: 'var(--font-serif)',
+          fontWeight: 700,
+          fontSize: 17,
+          color: 'var(--text-heading)',
+          letterSpacing: '-0.01em',
+          flex: 1,
+          textAlign: 'center',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {title}
+      </span>
+      {rightEl || <div style={{ width: 32 }} />}
     </div>
   )
 }

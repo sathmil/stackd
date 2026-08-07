@@ -44,7 +44,10 @@
  * @property {string} id
  * @property {string} variant_id
  * @property {string} user_id
- * @property {number} overall_rating
+ * @property {number} taste_rating
+ * @property {number} value_rating
+ * @property {number} effectiveness_rating
+ * @property {number} overall_rating -- derived: average of the three ratings above, rounded to 1 decimal
  * @property {boolean|null} would_buy_again
  * @property {string|null} notes
  * @property {'visible'|'flagged'|'removed'} status

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Share2, Check, Globe, Lock, Plus, Trash2 } from 'lucide-react'
 import { NavBar, ScorePill, Skeleton, ErrorState } from '../components/ui'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useAsync } from '../hooks/useAsync'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { fetchListById, fetchListItems, removeListItem, deleteList, updateListVisibility } from '../lib/api/lists'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 
 function formatCategory(raw) {
   return raw.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
@@ -16,6 +18,7 @@ export default function ListDetail() {
   const { listId } = useParams()
   const navigate = useNavigate()
   const user = useCurrentUser()
+  const confirm = useConfirm()
   const [copied, setCopied] = useState(false)
   const [removingId, setRemovingId] = useState(null)
   const [togglingVisibility, setTogglingVisibility] = useState(false)
@@ -54,7 +57,7 @@ export default function ListDetail() {
   }
 
   const handleRemove = async (itemId) => {
-    if (!window.confirm('Remove this product from the list?')) return
+    if (!(await confirm('Remove this product from the list?', { title: 'Remove product?', confirmLabel: 'Remove' }))) return
     setRemovingId(itemId)
     await removeListItem(itemId)
     setRemovingId(null)
@@ -69,7 +72,7 @@ export default function ListDetail() {
   }
 
   const handleDeleteList = async () => {
-    if (!window.confirm('Delete this list? This cannot be undone.')) return
+    if (!(await confirm('This cannot be undone.', { title: 'Delete this list?', confirmLabel: 'Delete List' }))) return
     await deleteList(listId)
     navigate('/lists')
   }
@@ -86,7 +89,7 @@ export default function ListDetail() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <NavBar title="List" onBack={() => navigate(-1)} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#828282', fontSize: 15, ...sans }}>List not found, or it's private.</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-quiet)', fontSize: 15, ...sans }}>List not found, or it's private.</div>
       </div>
     )
   }
@@ -100,75 +103,214 @@ export default function ListDetail() {
         title={list.name}
         onBack={() => navigate(-1)}
         rightEl={
-          <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#5ecfcf', ...sans, padding: 0 }}>
-            {copied ? 'Copied!' : 'Share'}
+          <button
+            onClick={handleShare}
+            className="stackd-press"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              background: 'var(--tier-teal-bg)',
+              border: '0.5px solid var(--tier-teal-border)',
+              borderRadius: 20,
+              padding: '7px 12px',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--tier-teal)',
+              ...sans,
+              flexShrink: 0,
+            }}
+          >
+            {copied ? <Check size={13} /> : <Share2 size={13} />}
+            {copied ? 'Copied' : 'Share'}
           </button>
         }
       />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {isOwn && (
           <>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: togglingVisibility ? 'default' : 'pointer' }}>
-              <input type="checkbox" checked={list.is_public} disabled={togglingVisibility} onChange={handleToggleVisibility} />
-              <span style={{ fontSize: 13, color: '#888', ...sans }}>Public (anyone with the link can view it)</span>
-            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                [true, Globe, 'Public'],
+                [false, Lock, 'Private'],
+              ].map(([val, Icon, label]) => {
+                const on = list.is_public === val
+                return (
+                  <button
+                    key={label}
+                    onClick={() => (togglingVisibility || on ? null : handleToggleVisibility())}
+                    disabled={togglingVisibility}
+                    className="stackd-press"
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      borderRadius: 10,
+                      padding: '9px 0',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: togglingVisibility ? 'default' : 'pointer',
+                      ...sans,
+                      background: on ? 'var(--tier-teal-bg)' : 'var(--bg-subtle)',
+                      border: `0.5px solid ${on ? 'var(--tier-teal-border)' : 'var(--border)'}`,
+                      color: on ? 'var(--tier-teal)' : 'var(--text-quiet)',
+                      opacity: togglingVisibility ? 0.6 : 1,
+                    }}
+                  >
+                    <Icon size={14} /> {label}
+                  </button>
+                )
+              })}
+            </div>
             <button
               onClick={() => navigate('/search')}
+              className="stackd-press"
               style={{
-                alignSelf: 'flex-start',
-                background: 'none',
-                border: '0.5px solid #2a2a2a',
-                borderRadius: 20,
-                padding: '8px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                alignSelf: 'stretch',
+                background: 'var(--bg-subtle)',
+                border: '1.5px dashed var(--border-strong)',
+                borderRadius: 12,
+                padding: '11px 0',
                 fontSize: 13,
-                color: '#ccc',
+                fontWeight: 700,
+                color: 'var(--text-input)',
                 cursor: 'pointer',
-                marginBottom: 4,
                 ...sans,
               }}
             >
-              + Add products
+              <Plus size={15} strokeWidth={2.5} /> Add Products
             </button>
           </>
         )}
 
         {items.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 0', color: '#828282', fontSize: 15, ...sans }}>{isOwn ? 'Nothing here yet. Add products from their page.' : 'This list is empty.'}</div>
+          <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-quiet)', fontSize: 15, ...sans }}>
+            {isOwn ? 'Nothing here yet. Add products from their page.' : 'This list is empty.'}
+          </div>
         )}
 
         {items.map((item, i) => {
           const variant = item.product_variants
           const product = variant.products
+          const rankColor = i === 0 ? 'var(--tier-gold)' : i === 1 ? 'var(--text-input)' : i === 2 ? 'var(--color-taste)' : 'var(--text-quiet)'
+          const rankBg = i === 0 ? 'var(--tier-gold-bg)' : i === 1 ? 'var(--bg-subtle)' : i === 2 ? 'var(--color-taste-bg)' : 'var(--bg-subtle)'
+          const rankBorder = i === 0 ? 'var(--tier-gold-border)' : i === 1 ? 'var(--border-medium)' : i === 2 ? 'var(--color-taste-border)' : 'var(--border-medium)'
           return (
-            <div key={item.id} style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ ...serif, fontSize: 14, color: '#828282', width: 16, flexShrink: 0 }}>{i + 1}</span>
+            <div
+              key={item.id}
+              className="stackd-elevated"
+              style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 18, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}
+            >
+              <div
+                style={{
+                  ...serif,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  color: rankColor,
+                  background: rankBg,
+                  border: `0.5px solid ${rankBorder}`,
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {i + 1}
+              </div>
+              <div
+                style={{
+                  position: 'relative',
+                  width: 52,
+                  height: 52,
+                  borderRadius: 12,
+                  background: 'var(--bg-photo)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                }}
+              >
+                {variant.image_url ? (
+                  <img
+                    src={variant.image_url}
+                    alt={variant.image_alt || product.name}
+                    style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain', filter: 'drop-shadow(0 5px 8px rgba(0,0,0,0.4))' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 18, color: 'var(--text-tertiary)', ...serif }}>{product.name.charAt(0)}</span>
+                )}
+              </div>
               <button onClick={() => navigate(`/product/${variant.id}`)} style={{ flex: 1, minWidth: 0, cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>
-                <div style={{ ...serif, fontSize: 15, color: '#e8e4dc', letterSpacing: '-0.01em' }}>
+                <div style={{ ...serif, fontWeight: 600, fontSize: 15, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                   {product.name}
                   {variant.flavor ? ` — ${variant.flavor}` : ''}
                 </div>
-                <div style={{ fontSize: 12, color: '#868686', ...sans, marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', ...sans, marginTop: 2 }}>
                   {product.brand_name} · {formatCategory(product.category)}
                 </div>
               </button>
-              {item.ownerRating != null && <ScorePill score={item.ownerRating} />}
-              {isOwn && (
-                <button
-                  onClick={() => handleRemove(item.id)}
-                  disabled={removingId === item.id}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#ff6b6b', ...sans, padding: 0, opacity: removingId === item.id ? 0.5 : 1, flexShrink: 0 }}
-                >
-                  Remove
-                </button>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                {item.ownerRating != null && <ScorePill score={item.ownerRating} />}
+                {isOwn && (
+                  <button
+                    onClick={() => handleRemove(item.id)}
+                    disabled={removingId === item.id}
+                    className="stackd-press"
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: '50%',
+                      background: 'none',
+                      border: '0.5px solid var(--border-medium)',
+                      color: 'var(--tier-red)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      opacity: removingId === item.id ? 0.5 : 1,
+                    }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
             </div>
           )
         })}
 
         {isOwn && (
-          <button onClick={handleDeleteList} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#868686', ...sans, padding: '12px 0', marginTop: 8 }}>
-            Delete list
+          <button
+            onClick={handleDeleteList}
+            className="stackd-press"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 7,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--tier-red)',
+              ...sans,
+              padding: '12px 0',
+              marginTop: 8,
+            }}
+          >
+            <Trash2 size={14} /> Delete List
           </button>
         )}
       </div>

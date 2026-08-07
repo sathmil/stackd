@@ -75,21 +75,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'ai_ingredient_analysis is disabled' }), { status: 200, headers: corsHeaders })
     }
 
-    const { data: variant, error: fetchErr } = await admin
-      .from('product_variants')
-      .select('id, ingredients_text, products(name, brand_name)')
-      .eq('id', variantId)
-      .single()
+    const { data: variant, error: fetchErr } = await admin.from('product_variants').select('id, ingredients_text, products(name, brand_name)').eq('id', variantId).single()
 
     if (fetchErr || !variant) {
       return new Response(JSON.stringify({ error: 'variant not found' }), { status: 404, headers: corsHeaders })
     }
 
     if (!variant.ingredients_text || variant.ingredients_text.trim().length < 3) {
-      await admin
-        .from('product_variants')
-        .update({ ai_analysis_status: 'failed', ai_analysis_version: ANALYSIS_VERSION, ai_ingredient_analyzed_at: new Date().toISOString() })
-        .eq('id', variantId)
+      await admin.from('product_variants').update({ ai_analysis_status: 'failed', ai_analysis_version: ANALYSIS_VERSION, ai_ingredient_analyzed_at: new Date().toISOString() }).eq('id', variantId)
       return new Response(JSON.stringify({ error: 'no ingredients_text to analyze' }), { status: 200, headers: corsHeaders })
     }
 
@@ -99,10 +92,7 @@ Deno.serve(async (req) => {
     try {
       result = await analyzeWithOpenAI(product?.name ?? '', product?.brand_name ?? '', variant.ingredients_text)
     } catch (llmErr) {
-      await admin
-        .from('product_variants')
-        .update({ ai_analysis_status: 'failed', ai_analysis_version: ANALYSIS_VERSION, ai_ingredient_analyzed_at: new Date().toISOString() })
-        .eq('id', variantId)
+      await admin.from('product_variants').update({ ai_analysis_status: 'failed', ai_analysis_version: ANALYSIS_VERSION, ai_ingredient_analyzed_at: new Date().toISOString() }).eq('id', variantId)
       return new Response(JSON.stringify({ error: String(llmErr) }), { status: 200, headers: corsHeaders })
     }
 

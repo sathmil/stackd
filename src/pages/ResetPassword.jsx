@@ -1,11 +1,21 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 
-const cardStyle = { width: '100%', maxWidth: 380, background: '#181818', border: '0.5px solid #222', borderRadius: 16, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16 }
-const buttonStyle = { background: '#f0ece4', color: '#111', borderRadius: 20, padding: '13px 0', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif }
+const cardStyle = {
+  width: '100%',
+  maxWidth: 380,
+  background: 'var(--bg-card)',
+  border: '0.5px solid var(--border)',
+  borderRadius: 16,
+  padding: '24px 20px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 16,
+}
+const buttonStyle = { background: 'var(--text-heading)', color: 'var(--bg-nav)', borderRadius: 20, padding: '13px 0', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif }
 
 export default function ResetPassword({ onDone }) {
   // Supabase's recovery email links point at their own /verify endpoint
@@ -61,12 +71,12 @@ export default function ResetPassword({ onDone }) {
   }
 
   const inputStyle = {
-    background: '#1a1a1a',
-    border: '0.5px solid #252525',
+    background: 'var(--bg-subtle)',
+    border: '0.5px solid var(--border-input)',
     borderRadius: 8,
     padding: '11px 13px',
     fontSize: 15,
-    color: '#ccc',
+    color: 'var(--text-input)',
     outline: 'none',
     width: '100%',
     ...sans,
@@ -74,11 +84,11 @@ export default function ResetPassword({ onDone }) {
 
   if (!verified) {
     return (
-      <div style={{ minHeight: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+      <div style={{ minHeight: '100dvh', background: 'var(--bg-nav)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
         <div style={cardStyle}>
-          <div style={{ ...serif, fontSize: 17, color: '#e8e4dc' }}>Reset your password</div>
-          <div style={{ fontSize: 14, color: '#888', ...sans, lineHeight: 1.6 }}>Tap below to continue -- this confirms it's really you, not just an email scan.</div>
-          {verifyError && <div style={{ fontSize: 13, color: '#ff6b6b', ...sans }}>{verifyError}</div>}
+          <div style={{ ...serif, fontSize: 17, color: 'var(--text-primary)' }}>Reset your password</div>
+          <div style={{ fontSize: 14, color: 'var(--text-body)', ...sans, lineHeight: 1.6 }}>Tap below to continue -- this confirms it's really you, not just an email scan.</div>
+          {verifyError && <div style={{ fontSize: 13, color: 'var(--tier-red)', ...sans }}>{verifyError}</div>}
           <button onClick={confirmReset} disabled={verifying} style={{ ...buttonStyle, cursor: verifying ? 'default' : 'pointer', opacity: verifying ? 0.6 : 1 }}>
             {verifying ? 'Confirming...' : 'Continue'}
           </button>
@@ -88,13 +98,13 @@ export default function ResetPassword({ onDone }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg-nav)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
       <div style={cardStyle}>
-        <div style={{ ...serif, fontSize: 17, color: '#e8e4dc' }}>Set a new password</div>
+        <div style={{ ...serif, fontSize: 17, color: 'var(--text-primary)' }}>Set a new password</div>
 
         {done ? (
           <>
-            <div style={{ fontSize: 14, color: '#888', ...sans, lineHeight: 1.6 }}>Your password has been updated.</div>
+            <div style={{ fontSize: 14, color: 'var(--text-body)', ...sans, lineHeight: 1.6 }}>Your password has been updated.</div>
             <button onClick={onDone} style={buttonStyle}>
               Continue
             </button>
@@ -102,10 +112,10 @@ export default function ResetPassword({ onDone }) {
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>New password</label>
+              <label style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>New password</label>
               <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
             </div>
-            {error && <div style={{ fontSize: 13, color: '#ff6b6b', ...sans }}>{error}</div>}
+            {error && <div style={{ fontSize: 13, color: 'var(--tier-red)', ...sans }}>{error}</div>}
             <button onClick={handleSubmit} disabled={submitting} style={{ ...buttonStyle, cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}>
               {submitting ? 'Please wait...' : 'Update password'}
             </button>

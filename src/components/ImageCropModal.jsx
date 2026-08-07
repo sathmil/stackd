@@ -1,29 +1,29 @@
 import { useState, useEffect } from 'react'
 import Cropper from 'react-easy-crop'
+import { X, Check, ZoomIn, ZoomOut } from 'lucide-react'
 import { cropImageToBlob } from '../lib/storage'
 
 const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 const serif = { fontFamily: 'var(--font-serif)' }
 
+const OUTPUT_SIZE = 800
+
 /**
- * Full-screen crop/zoom step between picking a photo and uploading it as
- * an avatar. Uses `position: absolute` (not `fixed`) since it needs to
- * cover the app shell, which is itself a centered, max-430px-wide
- * `position: relative` container rather than the full browser viewport --
- * see App.jsx's AppShell.
- * @param {{ file: File, onCancel: () => void, onCropped: (blob: Blob) => void }} props
+ * Same crop/zoom flow as AvatarCropModal, but a rectangular (not round) crop
+ * -- own component rather than a shared one with a `cropShape` prop since
+ * the two call sites want different chrome (this one has icon buttons, not
+ * text links) and diverging further later is likely. `aspect` defaults to a
+ * square (product photos); pass e.g. 3/2 for a landscape cover photo so it
+ * isn't over-cropped when shown in a wide card.
+ * @param {{ file: File, aspect?: number, onCancel: () => void, onCropped: (blob: Blob) => void }} props
  */
-export default function AvatarCropModal({ file, onCancel, onCropped }) {
+export default function ImageCropModal({ file, aspect = 1, onCancel, onCropped }) {
   const [imageSrc, setImageSrc] = useState(null)
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  // Object URL is created (and revoked) inside the effect itself, not via
-  // useMemo -- StrictMode's dev-mode double-invoke would otherwise run the
-  // cleanup from the first (throwaway) pass and revoke the URL the second,
-  // real pass still needs, leaving the image permanently broken.
   useEffect(() => {
     const url = URL.createObjectURL(file)
     setImageSrc(url)
@@ -33,7 +33,7 @@ export default function AvatarCropModal({ file, onCancel, onCropped }) {
   const handleSave = async () => {
     if (!croppedAreaPixels || !imageSrc) return
     setSaving(true)
-    const blob = await cropImageToBlob(imageSrc, croppedAreaPixels)
+    const blob = await cropImageToBlob(imageSrc, croppedAreaPixels, OUTPUT_SIZE, Math.round(OUTPUT_SIZE / aspect))
     setSaving(false)
     onCropped(blob)
   }
@@ -41,26 +41,46 @@ export default function AvatarCropModal({ file, onCancel, onCropped }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: 'var(--bg-nav)', display: 'flex', flexDirection: 'column', zIndex: 200 }}>
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid var(--border-subtle)', flexShrink: 0 }}>
-        <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)', ...sans, padding: 0 }}>
-          Cancel
+        <button
+          onClick={onCancel}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'var(--bg-subtle)',
+            border: '0.5px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <X size={16} strokeWidth={2.25} />
         </button>
-        <span style={{ ...serif, fontSize: 16, color: 'var(--text-primary)' }}>Adjust photo</span>
+        <span style={{ ...serif, fontWeight: 700, fontSize: 17, color: 'var(--text-heading)', letterSpacing: '-0.01em' }}>Adjust Photo</span>
         <button
           onClick={handleSave}
           disabled={saving || !croppedAreaPixels}
+          className="stackd-press"
           style={{
-            background: 'none',
-            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            background: 'var(--tier-teal-bg)',
+            border: '0.5px solid var(--tier-teal-border)',
+            borderRadius: 20,
+            padding: '7px 13px',
             cursor: saving ? 'default' : 'pointer',
-            fontSize: 14,
+            fontSize: 12,
+            fontWeight: 700,
             color: 'var(--tier-teal)',
             ...sans,
-            fontWeight: 500,
-            padding: 0,
             opacity: saving ? 0.5 : 1,
           }}
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? 'Saving...' : <Check size={14} />}
+          {!saving && 'Save'}
         </button>
       </div>
 
@@ -70,9 +90,9 @@ export default function AvatarCropModal({ file, onCancel, onCropped }) {
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            aspect={1}
-            cropShape="round"
-            showGrid={false}
+            aspect={aspect}
+            cropShape="rect"
+            showGrid={true}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
@@ -81,9 +101,9 @@ export default function AvatarCropModal({ file, onCancel, onCropped }) {
       </div>
 
       <div style={{ padding: '16px 20px 24px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        <span style={{ fontSize: 17, color: 'var(--text-muted)' }}>−</span>
+        <ZoomOut size={18} color="var(--text-muted)" />
         <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} style={{ flex: 1 }} aria-label="Zoom" />
-        <span style={{ fontSize: 17, color: 'var(--text-muted)' }}>+</span>
+        <ZoomIn size={18} color="var(--text-muted)" />
       </div>
     </div>
   )

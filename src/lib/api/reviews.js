@@ -50,6 +50,21 @@ export async function fetchActiveTags() {
 }
 
 /**
+ * Creates a new global tag (or returns the existing one if the label
+ * already exists -- `label` is unique, so a race/duplicate submit just
+ * resolves to the same row instead of erroring the user).
+ * @param {string} label
+ */
+export async function createTag(label) {
+  const trimmed = label.trim()
+  if (!trimmed) return { data: null, error: new Error('Tag label is required.') }
+  const { data: created, error } = await supabase.from('tags').insert({ label: trimmed, sentiment: 'neutral' }).select('id, label, sentiment').single()
+  if (!error) return { data: created, error: null }
+  if (error.code === '23505') return supabase.from('tags').select('id, label, sentiment').eq('label', trimmed).single()
+  return { data: null, error }
+}
+
+/**
  * The current user's own review for a variant, if any -- used to pre-fill
  * the form when editing rather than creating a duplicate.
  * @param {string} variantId
@@ -61,16 +76,23 @@ export async function fetchOwnReview(variantId, userId) {
 
 /**
  * One review per (variant_id, user_id) -- upsert so re-rating updates
- * rather than erroring or duplicating.
- * @param {{ variantId: string, userId: string, overallRating: number, wouldBuyAgain: boolean|null, notes: string }} params
+ * rather than erroring or duplicating. overall_rating is derived here (the
+ * average of the three sub-ratings, rounded to 1 decimal) rather than in
+ * SQL, so every existing aggregate view/sort/ScorePill that reads
+ * overall_rating keeps working unchanged.
+ * @param {{ variantId: string, userId: string, tasteRating: number, valueRating: number, effectivenessRating: number, wouldBuyAgain: boolean|null, notes: string }} params
  */
-export async function upsertReview({ variantId, userId, overallRating, wouldBuyAgain, notes }) {
+export async function upsertReview({ variantId, userId, tasteRating, valueRating, effectivenessRating, wouldBuyAgain, notes }) {
+  const overallRating = Math.round(((tasteRating + valueRating + effectivenessRating) / 3) * 10) / 10
   return supabase
     .from('reviews')
     .upsert(
       {
         variant_id: variantId,
         user_id: userId,
+        taste_rating: tasteRating,
+        value_rating: valueRating,
+        effectiveness_rating: effectivenessRating,
         overall_rating: overallRating,
         would_buy_again: wouldBuyAgain,
         notes: notes || null,

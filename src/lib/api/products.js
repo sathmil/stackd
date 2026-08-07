@@ -26,6 +26,11 @@ export async function fetchVariantById(variantId) {
   return supabase.from('product_variants').select('*, products(*, brands(*))').eq('id', variantId).maybeSingle()
 }
 
+/** For the barcode scanner -- product_variants.upc is unique, so at most one row. @param {string} upc */
+export async function fetchVariantByUpc(upc) {
+  return supabase.from('product_variants').select('*, products(*, brands(*))').eq('upc', upc).maybeSingle()
+}
+
 /** @param {string[]} variantIds */
 export async function fetchRatingSummaries(variantIds) {
   if (variantIds.length === 0) return { data: [], error: null }

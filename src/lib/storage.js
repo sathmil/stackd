@@ -46,12 +46,16 @@ const AVATAR_OUTPUT_SIZE = 400
  * pixel coordinates, as produced by react-easy-crop's onCropComplete) onto a
  * fixed-size square canvas and re-encodes it as WebP -- this is the final
  * upload-ready blob, no separate compressImage pass needed since the canvas
- * is already downscaled to AVATAR_OUTPUT_SIZE.
+ * is already downscaled to `outputWidth`x`outputHeight` (both default to the
+ * avatar size/aspect; product and list-cover photos pass their own, since
+ * they aren't cropped to a small square).
  * @param {string} imageSrc -- object URL for the source file
  * @param {{ x: number, y: number, width: number, height: number }} cropPixels
+ * @param {number} [outputWidth]
+ * @param {number} [outputHeight]
  * @returns {Promise<Blob>}
  */
-export async function cropImageToBlob(imageSrc, cropPixels) {
+export async function cropImageToBlob(imageSrc, cropPixels, outputWidth = AVATAR_OUTPUT_SIZE, outputHeight = outputWidth) {
   const image = await new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => resolve(img)
@@ -60,9 +64,9 @@ export async function cropImageToBlob(imageSrc, cropPixels) {
   })
 
   const canvas = document.createElement('canvas')
-  canvas.width = AVATAR_OUTPUT_SIZE
-  canvas.height = AVATAR_OUTPUT_SIZE
-  canvas.getContext('2d').drawImage(image, cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height, 0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE)
+  canvas.width = outputWidth
+  canvas.height = outputHeight
+  canvas.getContext('2d').drawImage(image, cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height, 0, 0, outputWidth, outputHeight)
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Image crop failed'))), 'image/webp', 0.85)

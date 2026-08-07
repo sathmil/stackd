@@ -1,5 +1,153 @@
 @import 'tailwindcss';
 
+/*
+ * Theme tokens. Dark is the default/base palette (:root); light overrides
+ * live in :root[data-theme="light"], toggled by useTheme.js writing that
+ * attribute onto <html> and persisting the choice in localStorage. Every
+ * color used anywhere in the app should reference one of these variables,
+ * not a literal hex -- that's what actually makes the toggle work, since a
+ * hardcoded hex in a component doesn't change when the attribute flips.
+ */
+:root {
+  --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Surfaces, darkest to lightest */
+  --bg: #0a0a0a;
+  --bg-nav: #12131a;
+  --bg-card: #191a22;
+  --bg-subtle: #0e0c0c;
+  --bg-input: #1a1a1a;
+  --bg-modal: #161616;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  /* Fixed light "photo mat" behind product images in feed cards -- not
+     theme-dependent, matches the mockup's deliberate light backdrop that
+     makes product photos pop against the dark card regardless of theme. */
+  --bg-photo: #191a22;
+
+  /* Borders, subtle to strong */
+  --border-subtle: #1e1e1e;
+  --border: #2c2e3a;
+  --border-input: #252525;
+  --border-medium: #33343c;
+  --border-strong: #333333;
+
+  /* Text, brightest to faintest */
+  --text-heading: #ffffff;
+  --text-primary: #ffffff;
+  --text-input: #cccccc;
+  --text-secondary: #969696;
+  --text-body: #888888;
+  --text-muted: #8f8f8f;
+  --text-tertiary: #868686;
+  --text-quiet: #828282;
+  --text-faint: #666666;
+
+  /* Per-metric accent colors -- taste/value/effectiveness each get their
+     own hue so ratings read as multicolor accents against the black/white
+     base, rather than everything sharing one "brand blue". */
+  --color-taste: #ff4d8d;
+  --color-taste-bg: #2a0d1a;
+  --color-taste-border: #3a1526;
+  --color-value: #4d9fff;
+  --color-value-bg: #0d1a2a;
+  --color-value-border: #15263a;
+  --color-effect: #4ade80;
+  --color-effect-bg: #0d2213;
+  --color-effect-border: #163a20;
+
+  /* Score-tier colors (scoreStyle.js) */
+  --tier-teal: #5ecfcf;
+  --tier-teal-bg: #0d2020;
+  --tier-teal-border: #1a3030;
+  --tier-purple: #494949;
+  --tier-purple-bg: #1a1525;
+  --tier-purple-border: #2a2040;
+  --tier-red: #ff6b6b;
+  --tier-red-bg: #2a1010;
+  --tier-red-border: #3a1a1a;
+  --tier-gold: #e8c97a;
+  --tier-gold-bg: #252010;
+  --tier-gold-border: #352f1a;
+
+  /* Avatar fallback palette (colorHash.js) */
+  --avatar-coral-bg: #2a1010;
+  --avatar-coral-fg: #ff6b6b;
+  --avatar-cyan-bg: #0d2020;
+  --avatar-cyan-fg: #5ecfcf;
+  --avatar-lav-bg: #1a1525;
+  --avatar-lav-fg: #a78bfa;
+  --avatar-warm-bg: #252010;
+  --avatar-warm-fg: #e8c97a;
+}
+
+:root[data-theme='light'] {
+  /* Cool white + soft lavender card tint, matching the light-theme mockup
+     -- deliberately NOT a warm cream/parchment palette (that was the
+     previous light theme, replaced here), and dark theme is untouched. */
+  --bg: #ffffff;
+  --bg-nav: #ffffff;
+  --bg-card: #f6f5fb;
+  --bg-subtle: #eeecf7;
+  --bg-input: #f0eef9;
+  --bg-modal: #ffffff;
+  --bg-overlay: rgba(20, 16, 10, 0.4);
+  /* Dark theme's flat #191A22 photo-mat is dark-theme-specific (an explicit
+     choice made against a dark card) -- in light theme that same panel
+     needs the light-theme's own soft lavender tint instead, or a product
+     photo would sit on a jarring dark rectangle inside an otherwise white
+     card. */
+  --bg-photo: #eeecf7;
+
+  --border-subtle: #eeecf5;
+  --border: #e3e0f0;
+  --border-input: #ddd9ee;
+  --border-medium: #d5d1e8;
+  --border-strong: #c3bdda;
+
+  --text-heading: #0a0a0a;
+  --text-primary: #17151f;
+  --text-input: #1f1c29;
+  --text-secondary: #55506a;
+  --text-body: #5f5a72;
+  --text-muted: #656079;
+  --text-tertiary: #625d76;
+  --text-quiet: #6d6880;
+  --text-faint: #8a84a0;
+
+  --color-taste: #d6296b;
+  --color-taste-bg: #fbe3ee;
+  --color-taste-border: #f2c1d9;
+  --color-value: #1f6fd6;
+  --color-value-bg: #e2edfc;
+  --color-value-border: #bcd7f7;
+  --color-effect: #1f9d55;
+  --color-effect-bg: #e1f5e8;
+  --color-effect-border: #bce8cc;
+
+  --tier-teal: #0d8a8a;
+  --tier-teal-bg: #e0f6f6;
+  --tier-teal-border: #b8e8e8;
+  --tier-purple: #848484;
+  --tier-purple-bg: #f0ebfc;
+  --tier-purple-border: #ddd0f5;
+  --tier-red: #d6296b;
+  --tier-red-bg: #fde8e8;
+  --tier-red-border: #f8c9c9;
+  --tier-gold: #a3660a;
+  --tier-gold-bg: #fdf3d9;
+  --tier-gold-border: #f5e0a3;
+
+  --avatar-coral-bg: #fde8e8;
+  --avatar-coral-fg: #c23f3f;
+  --avatar-cyan-bg: #e0f6f6;
+  --avatar-cyan-fg: #0d8a8a;
+  --avatar-lav-bg: #f0ebfc;
+  --avatar-lav-fg: #6d38c9;
+  --avatar-warm-bg: #fdf3d9;
+  --avatar-warm-fg: #8a5a0a;
+}
+
 *,
 *::before,
 *::after {
@@ -11,12 +159,12 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  background: #0a0a0a;
+  background: var(--bg);
 }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  color: #e8e4dc;
+  color: var(--text-primary);
 }
 input,
 textarea,
@@ -75,8 +223,29 @@ select:focus-visible,
 button:focus-visible,
 [role='button']:focus-visible,
 a:focus-visible {
-  outline: 2px solid #5ecfcf !important;
+  outline: 2px solid var(--tier-teal) !important;
   outline-offset: 2px !important;
+}
+
+/*
+ * A plain <input> living inside a rounded pill wrapper (e.g. the Search
+ * page's search bar) still only gets a focus ring around its own
+ * rectangular box, which clips against/clashes with the pill's rounded
+ * corners. For inputs wrapped in .stackd-pill-input, show the ring on the
+ * pill itself instead (border + soft glow, matching its own border-radius)
+ * and suppress the input's own ring so there's only one focus indicator.
+ */
+.stackd-pill-input {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.stackd-pill-input:focus-within {
+  border-color: var(--tier-teal) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tier-teal) 22%, transparent);
+}
+.stackd-pill-input input:focus-visible {
+  outline: none !important;
 }
 
 @keyframes skeleton-pulse {
@@ -89,7 +258,72 @@ a:focus-visible {
   }
 }
 .skeleton-block {
-  background: #1a1a1a;
+  background: var(--bg-subtle);
   border-radius: 8px;
   animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/*
+ * Shared "modern UI" motion/elevation utilities -- inline style objects
+ * can't express :hover/:active, so these live here instead. Kept generic
+ * (not Profile-specific) so any page can opt in with a className.
+ */
+.stackd-elevated {
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+.stackd-elevated:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong) !important;
+}
+.stackd-elevated:active {
+  transform: translateY(0);
+  transition-duration: 0.05s;
+}
+
+.stackd-press {
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.stackd-press:active {
+  transform: scale(0.96);
+}
+
+/*
+ * Scan page idle-state invitation to tap: the glow behind the barcode icon
+ * breathes (scale + fade) to draw the eye without being a distracting sweep.
+ */
+@keyframes stackd-glow-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+.stackd-scan-glow {
+  animation: stackd-glow-breathe 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stackd-scan-glow {
+    animation: none;
+  }
+}
+
+.stackd-avatar-ring {
+  display: inline-block;
+  border-radius: 50%;
+  border: 3px solid var(--border-strong);
+}
+.stackd-avatar-ring > * {
+  display: block;
+  border-radius: 50%;
 }

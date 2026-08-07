@@ -47,17 +47,17 @@ Products are a parent + variant model: a product (e.g. "Celsius") has one row pe
 
 One authoritative place per concern:
 
-| Concern | Source of truth |
-|---|---|
-| Auth/session | Supabase Auth (`auth.users`) |
-| User profile | `profiles` |
-| Catalog | `products` / `product_variants` |
-| User ratings | `reviews` (`taste_rating`, `value_effectiveness_rating` only) |
-| Ingredient quality | AI — written only by the Phase 8 Edge Function via the service role, never the client (enforced by a Postgres trigger) |
-| Aggregate/overall score | `variant_rating_summary` SQL view — never recomputed ad hoc in JS |
-| Lists | `lists` / `list_items` |
-| Moderation status | `status` columns, changed only via Supabase Studio |
-| Kill-switches | `feature_flags` |
+| Concern                 | Source of truth                                                                                                        |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Auth/session            | Supabase Auth (`auth.users`)                                                                                           |
+| User profile            | `profiles`                                                                                                             |
+| Catalog                 | `products` / `product_variants`                                                                                        |
+| User ratings            | `reviews` (`taste_rating`, `value_effectiveness_rating` only)                                                          |
+| Ingredient quality      | AI — written only by the Phase 8 Edge Function via the service role, never the client (enforced by a Postgres trigger) |
+| Aggregate/overall score | `variant_rating_summary` SQL view — never recomputed ad hoc in JS                                                      |
+| Lists                   | `lists` / `list_items`                                                                                                 |
+| Moderation status       | `status` columns, changed only via Supabase Studio                                                                     |
+| Kill-switches           | `feature_flags`                                                                                                        |
 
 ## Auth flow
 

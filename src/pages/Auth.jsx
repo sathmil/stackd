@@ -3,26 +3,39 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { trackEvent } from '../lib/analytics'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
+
+const VALUE_PROPS = [
+  { icon: '👀', color: 'var(--tier-teal)', bg: 'var(--tier-teal-bg)', t: 'See what the crowd is rating' },
+  { icon: '📊', color: 'var(--tier-purple)', bg: 'var(--tier-purple-bg)', t: 'Honest multi-dimensional scores' },
+  { icon: '🧪', color: 'var(--tier-red)', bg: 'var(--tier-red-bg)', t: 'AI-analyzed ingredient quality' },
+]
 
 export default function Auth({ onSignedUp }) {
   const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [resetSent, setResetSent] = useState(false)
 
+  // Supabase's own default minimum -- validating client-side against the
+  // same floor the server will enforce anyway, so a too-short password
+  // fails fast instead of round-tripping to the API first.
+  const MIN_PASSWORD_LENGTH = 6
+
   const inputStyle = {
-    background: '#1a1a1a',
-    border: '0.5px solid #252525',
-    borderRadius: 8,
-    padding: '11px 13px',
+    background: 'var(--bg-subtle)',
+    border: '0.5px solid var(--border-input)',
+    borderRadius: 12,
+    padding: '13px 15px',
     fontSize: 15,
-    color: '#ccc',
+    color: 'var(--text-input)',
     outline: 'none',
     width: '100%',
     ...sans,
@@ -34,9 +47,19 @@ export default function Auth({ onSignedUp }) {
       setError('Please fill in all fields.')
       return
     }
-    if (!isLogin && !disclaimerAccepted) {
-      setError('Please accept the disclaimer to continue.')
-      return
+    if (!isLogin) {
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`)
+        return
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords don’t match.')
+        return
+      }
+      if (!disclaimerAccepted) {
+        setError('Please accept the disclaimer to continue.')
+        return
+      }
     }
 
     setSubmitting(true)
@@ -67,26 +90,49 @@ export default function Auth({ onSignedUp }) {
     else setResetSent(true)
   }
 
+  // Soft multicolor glow wash behind the page, echoing the avatar ring
+  // gradient elsewhere in the app, instead of a flat single-color bg.
+  const pageBackground = {
+    minHeight: '100dvh',
+    background: `
+      radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--color-taste) 16%, transparent), transparent 45%),
+      radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--color-value) 14%, transparent), transparent 45%),
+      radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--color-effect) 12%, transparent), transparent 50%),
+      var(--bg-nav)
+    `,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px 20px',
+  }
+
   if (resetSent) {
     return (
-      <div style={{ minHeight: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+      <div style={pageBackground}>
         <div
+          className="stackd-elevated"
           style={{
             width: '100%',
             maxWidth: 380,
-            background: '#181818',
-            border: '0.5px solid #222',
-            borderRadius: 16,
-            padding: '24px 20px',
+            background: 'var(--bg-card)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 20,
+            padding: '28px 22px',
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
             textAlign: 'center',
           }}
         >
-          <div style={{ ...serif, fontSize: 17, color: '#e8e4dc' }}>Check your email</div>
-          <div style={{ fontSize: 14, color: '#888', ...sans, lineHeight: 1.6 }}>We sent a password reset link to {email}.</div>
-          <button onClick={() => setResetSent(false)} style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#5ecfcf', ...sans }}>
+          <div style={{ fontSize: 32 }}>📬</div>
+          <div style={{ ...serif, fontSize: 18, color: 'var(--text-heading)' }}>Check your email</div>
+          <div style={{ fontSize: 14, color: 'var(--text-body)', ...sans, lineHeight: 1.6 }}>We sent a password reset link to {email}.</div>
+          <button
+            onClick={() => setResetSent(false)}
+            className="stackd-press"
+            style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--tier-teal)', ...sans }}
+          >
             Back to login
           </button>
         </div>
@@ -95,46 +141,145 @@ export default function Auth({ onSignedUp }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+    <div style={pageBackground}>
       <div style={{ width: '100%', maxWidth: 380 }}>
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ ...serif, fontStyle: 'italic', fontSize: 42, color: '#f0ece4', letterSpacing: '-0.02em', lineHeight: 1 }}>Stackd</div>
-          <div style={{ color: '#8f8f8f', fontSize: 14, marginTop: 7, ...sans }}>Rate what fuels you.</div>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ ...serif, fontStyle: 'italic', fontSize: 44, color: 'var(--text-heading)', letterSpacing: '-0.02em', lineHeight: 1 }}>Stackd</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 8, ...sans }}>Rate what fuels you.</div>
         </div>
 
         {/* Form card */}
-        <div style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 16, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ ...serif, fontSize: 17, color: '#e8e4dc', letterSpacing: '-0.01em' }}>{isLogin ? 'Welcome back' : 'Create your account'}</div>
+        <div
+          className="stackd-elevated"
+          style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}
+        >
+          {/* Segmented Login/Sign up toggle, matching Profile's tab style */}
+          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-subtle)', borderRadius: 24, padding: 4 }}>
+            {[
+              [true, 'Log in'],
+              [false, 'Sign up'],
+            ].map(([val, label]) => (
+              <button
+                key={label}
+                onClick={() => {
+                  setIsLogin(val)
+                  setError('')
+                  setConfirmPassword('')
+                }}
+                className="stackd-press"
+                style={{
+                  flex: 1,
+                  background: isLogin === val ? 'var(--bg-card)' : 'none',
+                  border: 'none',
+                  borderRadius: 20,
+                  cursor: 'pointer',
+                  padding: '9px 0',
+                  fontSize: 13,
+                  ...sans,
+                  color: isLogin === val ? 'var(--text-primary)' : 'var(--text-quiet)',
+                  fontWeight: isLogin === val ? 500 : 400,
+                  boxShadow: isLogin === val ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Email</label>
-              <input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+              <label style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>Email</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', fontSize: 14, opacity: 0.6 }}>✉</span>
+                <input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, paddingLeft: 38 }} />
+              </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Password</label>
-              <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
+              <label style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>Password</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', fontSize: 14, opacity: 0.6 }}>🔒</span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: 38, paddingRight: 44 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="stackd-press"
+                  tabIndex={-1}
+                  style={{
+                    position: 'absolute',
+                    right: 6,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    color: 'var(--text-muted)',
+                    padding: '6px 8px',
+                  }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {!isLogin && (
+                <span style={{ fontSize: 11, color: password.length > 0 && password.length < MIN_PASSWORD_LENGTH ? 'var(--tier-red)' : 'var(--text-faint)', ...sans }}>
+                  At least {MIN_PASSWORD_LENGTH} characters
+                </span>
+              )}
             </div>
+
+            {!isLogin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>Confirm password</label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', fontSize: 14, opacity: 0.6 }}>🔒</span>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      paddingLeft: 38,
+                      border: confirmPassword.length > 0 && confirmPassword !== password ? '0.5px solid var(--tier-red-border)' : inputStyle.border,
+                    }}
+                  />
+                </div>
+                {confirmPassword.length > 0 && confirmPassword !== password && <span style={{ fontSize: 11, color: 'var(--tier-red)', ...sans }}>Passwords don’t match</span>}
+              </div>
+            )}
           </div>
 
           {!isLogin && (
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={disclaimerAccepted} onChange={(e) => setDisclaimerAccepted(e.target.checked)} style={{ marginTop: 2 }} />
-              <span style={{ fontSize: 12, color: '#666', ...sans, lineHeight: 1.5 }}>High-caffeine products aren't recommended for minors -- I confirm I'm old enough to use this app.</span>
+              <span style={{ fontSize: 12, color: 'var(--text-faint)', ...sans, lineHeight: 1.5 }}>
+                High-caffeine products aren't recommended for minors -- I confirm I'm old enough to use this app.
+              </span>
             </label>
           )}
 
-          {error && <div style={{ fontSize: 13, color: '#ff6b6b', ...sans }}>{error}</div>}
+          {error && (
+            <div style={{ background: 'var(--tier-red-bg)', border: '0.5px solid var(--tier-red-border)', borderRadius: 10, padding: '10px 12px', fontSize: 13, color: 'var(--tier-red)', ...sans }}>
+              {error}
+            </div>
+          )}
 
           <button
             onClick={handleSubmit}
             disabled={submitting}
+            className="stackd-press"
             style={{
-              background: '#f0ece4',
-              color: '#111',
+              background: 'var(--text-heading)',
+              color: 'var(--bg-nav)',
               borderRadius: 20,
-              padding: '13px 0',
+              padding: '14px 0',
               fontSize: 15,
               fontWeight: 500,
               border: 'none',
@@ -147,25 +292,16 @@ export default function Auth({ onSignedUp }) {
           </button>
 
           {isLogin && (
-            <button onClick={handleForgotPassword} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#8f8f8f', ...sans, padding: 0 }}>
+            <button
+              onClick={handleForgotPassword}
+              className="stackd-press"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)', ...sans, padding: 0 }}
+            >
               Forgot password?
             </button>
           )}
 
-          <div style={{ textAlign: 'center', fontSize: 13, color: '#828282', ...sans }}>
-            {isLogin ? "Don't have an account? " : 'Already have an account? '}
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin)
-                setError('')
-              }}
-              style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: '#5ecfcf', cursor: 'pointer', fontWeight: 500 }}
-            >
-              {isLogin ? 'Sign up' : 'Log in'}
-            </button>
-          </div>
-
-          <div style={{ textAlign: 'center', fontSize: 11, color: '#828282', ...sans }}>
+          <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-quiet)', ...sans }}>
             <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}>
               Terms
             </button>
@@ -177,16 +313,30 @@ export default function Auth({ onSignedUp }) {
         </div>
 
         {/* Value props */}
-        <div style={{ marginTop: 14, background: '#181818', border: '0.5px solid #222', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 10, color: '#828282', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>What you'll get</div>
-          {[
-            { c: '#5ecfcf', t: 'See what the crowd is rating' },
-            { c: '#a78bfa', t: 'Honest multi-dimensional scores' },
-            { c: '#ff6b6b', t: 'AI-analyzed ingredient quality' },
-          ].map(({ c, t }) => (
-            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0 }} />
-              <span style={{ fontSize: 14, color: '#666', ...sans }}>{t}</span>
+        <div
+          className="stackd-elevated"
+          style={{ marginTop: 14, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}
+        >
+          <div style={{ fontSize: 10, color: 'var(--text-quiet)', textTransform: 'uppercase', letterSpacing: '0.07em', ...sans }}>What you'll get</div>
+          {VALUE_PROPS.map(({ icon, color, bg, t }) => (
+            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 9,
+                  background: bg,
+                  border: `0.5px solid ${color}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 14,
+                  flexShrink: 0,
+                }}
+              >
+                {icon}
+              </div>
+              <span style={{ fontSize: 14, color: 'var(--text-primary)', ...sans }}>{t}</span>
             </div>
           ))}
         </div>

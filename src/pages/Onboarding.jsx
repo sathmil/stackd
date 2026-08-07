@@ -3,24 +3,24 @@ import { Chip } from '../components/ui'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { updateProfile } from '../lib/api/profiles'
 
-const serif = { fontFamily: 'Georgia, "Times New Roman", serif' }
-const sans = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 500 }
+const serif = { fontFamily: 'var(--font-serif)' }
+const sans = { fontFamily: 'var(--font-sans)', fontWeight: 500 }
 
 const CATEGORY_OPTIONS = ['Energy', 'Protein', 'Supps', 'Greens', 'Snacks']
 
 const EXPLAINER = [
-  { c: '#5ecfcf', t: 'Rate taste and value/effectiveness yourself -- 1 to 5, decimals allowed.' },
-  { c: '#a78bfa', t: "AI reads the ingredient list and scores quality for you -- that part isn't a guess." },
-  { c: '#ff6b6b', t: 'Save favorites to a ranked list and share it with a link.' },
+  { c: 'var(--tier-teal)', t: 'Rate taste and value/effectiveness yourself -- 1 to 5, decimals allowed.' },
+  { c: 'var(--tier-purple)', t: "AI reads the ingredient list and scores quality for you -- that part isn't a guess." },
+  { c: 'var(--tier-red)', t: 'Save favorites to a ranked list and share it with a link.' },
 ]
 
 const inputStyle = {
-  background: '#1a1a1a',
-  border: '0.5px solid #252525',
+  background: 'var(--bg-subtle)',
+  border: '0.5px solid var(--border-input)',
   borderRadius: 8,
   padding: '11px 13px',
   fontSize: 15,
-  color: '#ccc',
+  color: 'var(--text-input)',
   outline: 'none',
   width: '100%',
   ...sans,
@@ -80,24 +80,24 @@ function ProfileInfoStep({ onDone }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg-nav)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
       <div style={{ width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 24 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ ...serif, fontSize: 22, color: '#f0ece4', letterSpacing: '-0.01em' }}>Set up your profile</div>
-          <div style={{ color: '#8f8f8f', fontSize: 14, marginTop: 6, ...sans }}>Pick a username -- everything else is optional.</div>
+          <div style={{ ...serif, fontSize: 22, color: 'var(--text-heading)', letterSpacing: '-0.01em' }}>Set up your profile</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 6, ...sans }}>Pick a username -- everything else is optional.</div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Username</label>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>Username</label>
             <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. proteinpapi" style={inputStyle} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Display name (optional)</label>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>Display name (optional)</label>
             <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Shown instead of your username" style={inputStyle} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Location (optional)</label>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>Location (optional)</label>
             <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City" list="onboarding-location-options" style={inputStyle} />
             <datalist id="onboarding-location-options">
               {locationSuggestions.map((loc) => (
@@ -106,19 +106,19 @@ function ProfileInfoStep({ onDone }) {
             </datalist>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>Goal (optional)</label>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>Goal (optional)</label>
             <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g. Health-conscious" style={inputStyle} />
           </div>
         </div>
 
-        {error && <div style={{ fontSize: 13, color: '#ff6b6b', ...sans }}>{error}</div>}
+        {error && <div style={{ fontSize: 13, color: 'var(--tier-red)', ...sans }}>{error}</div>}
 
         <button
           onClick={handleSubmit}
           disabled={saving}
           style={{
-            background: '#f0ece4',
-            color: '#111',
+            background: 'var(--text-heading)',
+            color: 'var(--bg-nav)',
             borderRadius: 20,
             padding: '14px 0',
             fontSize: 16,
@@ -142,24 +142,24 @@ function ExplainerStep({ onDone }) {
   const toggle = (category) => setSelected((s) => (s.includes(category) ? s.filter((c) => c !== category) : [...s, category]))
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#111', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg-nav)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
       <div style={{ width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 24 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ ...serif, fontSize: 22, color: '#f0ece4', letterSpacing: '-0.01em' }}>Welcome to Stackd</div>
-          <div style={{ color: '#8f8f8f', fontSize: 14, marginTop: 6, ...sans }}>A quick look at how rating works here.</div>
+          <div style={{ ...serif, fontSize: 22, color: 'var(--text-heading)', letterSpacing: '-0.01em' }}>Welcome to Stackd</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 6, ...sans }}>A quick look at how rating works here.</div>
         </div>
 
-        <div style={{ background: '#181818', border: '0.5px solid #222', borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {EXPLAINER.map(({ c, t }) => (
             <div key={t} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0, marginTop: 6 }} />
-              <span style={{ fontSize: 14, color: '#888', ...sans, lineHeight: 1.6 }}>{t}</span>
+              <span style={{ fontSize: 14, color: 'var(--text-body)', ...sans, lineHeight: 1.6 }}>{t}</span>
             </div>
           ))}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <span style={{ fontSize: 12, color: '#8f8f8f', ...sans }}>What are you into? (optional)</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', ...sans }}>What are you into? (optional)</span>
           <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
             {CATEGORY_OPTIONS.map((category) => (
               <Chip key={category} label={category} active={selected.includes(category)} onClick={() => toggle(category)} />
@@ -167,7 +167,10 @@ function ExplainerStep({ onDone }) {
           </div>
         </div>
 
-        <button onClick={onDone} style={{ background: '#f0ece4', color: '#111', borderRadius: 20, padding: '14px 0', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif }}>
+        <button
+          onClick={onDone}
+          style={{ background: 'var(--text-heading)', color: 'var(--bg-nav)', borderRadius: 20, padding: '14px 0', fontSize: 16, fontWeight: 500, border: 'none', cursor: 'pointer', ...serif }}
+        >
           Start exploring
         </button>
       </div>
